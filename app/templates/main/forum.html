@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Foro — {{ faculty.name }}{% endblock %}
+
+{% macro author_label(post) %}
+  {% if post.is_anonymous %}
+    {% if current_user.is_authenticated and current_user.is_admin %}
+      <strong>{{ post.author.name }}</strong>
+      <span class="text-muted ms-1">(anónimo)</span>
+    {% else %}
+      <strong>Anónimo</strong>
+    {% endif %}
+  {% else %}
+    <strong>{{ post.author.name }}</strong>
+    {% if post.author.is_admin %}
+      <span class="badge bg-primary ms-1" style="font-size:.6rem;vertical-align:middle">Admin</span>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=faculty.slug) }}">{{ faculty.name }}</a>
+    </li>
+    <li class="breadcrumb-item active">Foro</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="fw-bold mb-0">Foro</h1>
+    <p class="text-muted mb-0 small">{{ faculty.name }}</p>
+  </div>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('main.new_thread', faculty_slug=faculty.slug) }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo hilo
+  </a>
+  {% else %}
+  <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo hilo
+  </a>
+  {% endif %}
+</div>
+
+{% if not current_user.is_authenticated %}
+<div class="alert alert-secondary d-flex align-items-center gap-2 mb-4 py-2">
+  <i class="bi bi-info-circle flex-shrink-0"></i>
+  <span class="small"><a href="{{ url_for('auth.login') }}">Iniciá sesión</a> para participar en el foro.</span>
+</div>
+{% endif %}
+
+{% if threads %}
+<div class="list-group">
+  {% for thread in threads %}
+  <a href="{{ url_for('main.view_thread', faculty_slug=faculty.slug, thread_id=thread.id) }}"
+     class="list-group-item list-group-item-action py-3 px-4">
+    <div class="d-flex justify-content-between align-items-center gap-3">
+      <div class="min-w-0 flex-grow-1">
+        <div class="fw-semibold mb-1">{{ thread.title }}</div>
+        <div class="text-muted small">
+          {{ author_label(thread) }}
+          <span class="ms-2">{{ thread.created_at.strftime('%d/%m/%Y') }}</span>
+        </div>
+      </div>
+      <div class="text-muted small text-nowrap flex-shrink-0">
+        <i class="bi bi-chat me-1"></i>{{ thread.reply_count }}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-chat-square display-4 d-block mb-3 opacity-25"></i>
+  <p class="mb-0">Todavía no hay hilos en este foro.</p>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('main.new_thread', faculty_slug=faculty.slug) }}" class="btn btn-primary mt-3">
+    Crear el primer hilo
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

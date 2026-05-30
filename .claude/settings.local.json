@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\\\Users\\\\manu\\\\proyectos\\\\ratoneando-austral\"; $env:FLASK_APP = \"run.py\"; .\\\\venv\\\\Scripts\\\\python -c \"from app import create_app; app = create_app\\(\\); print\\('App OK'\\); ctx = app.test_request_context\\(\\); ctx.push\\(\\); from app.models import Subject, Resource, User; print\\(f'Users: {User.query.count\\(\\)}, Subjects: {Subject.query.count\\(\\)}, Resources: {Resource.query.count\\(\\)}'\\)\")",
+      "mcp__claude_ai_Google_Drive__get_file_metadata",
+      "mcp__claude_ai_Google_Drive__search_files"
+    ]
+  }
+}

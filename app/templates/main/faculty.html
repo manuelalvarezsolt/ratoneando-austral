@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{{ faculty.name }} — Ratoneando Austral{% endblock %}
+
+{% set career_meta = {
+  'ingenieria-industrial':    {'icon': 'bi-gear-wide-connected', 'color': 'primary'},
+  'ingenieria-biomedica':     {'icon': 'bi-heart-pulse',         'color': 'danger'},
+  'ingenieria-informatica':   {'icon': 'bi-cpu',                 'color': 'success'},
+  'abogacia':                 {'icon': 'bi-building',            'color': 'warning'},
+  'comunicacion-carrera':     {'icon': 'bi-megaphone',           'color': 'info'},
+  'diseno':                   {'icon': 'bi-palette',             'color': 'info'},
+  'marketing-com-dis':        {'icon': 'bi-bar-chart-line',      'color': 'info'},
+  'medicina':                 {'icon': 'bi-activity',            'color': 'danger'},
+  'enfermeria':               {'icon': 'bi-clipboard-pulse',     'color': 'danger'},
+  'nutricion':                {'icon': 'bi-egg-fried',           'color': 'success'},
+  'psicologia':               {'icon': 'bi-person-circle',       'color': 'warning'},
+  'administracion-empresas':  {'icon': 'bi-building',            'color': 'success'},
+  'contador-publico':         {'icon': 'bi-calculator',          'color': 'success'},
+  'economia-empresarial':     {'icon': 'bi-graph-up',            'color': 'success'},
+  'marketing-management':     {'icon': 'bi-briefcase',           'color': 'success'},
+  'negocios-digitales':       {'icon': 'bi-laptop',              'color': 'success'},
+  'ciencia-politica':          {'icon': 'bi-flag',   'color': 'dark'},
+  'relaciones-internacionales':{'icon': 'bi-globe',  'color': 'dark'}
+} %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    <li class="breadcrumb-item active">{{ faculty.name }}</li>
+  </ol>
+</nav>
+
+<div class="text-center mb-5">
+  <h1 class="fw-bold mb-1">{{ faculty.name }}</h1>
+  <p class="text-muted mb-0">Elegí tu carrera</p>
+</div>
+
+<div class="row g-4 justify-content-center mb-5">
+  {% for career in faculty.careers %}
+    {% set meta = career_meta.get(career.slug, {'icon': 'bi-mortarboard', 'color': 'primary'}) %}
+    <div class="col-md-6 col-lg-4">
+      <a href="{{ url_for('main.career_view', career_slug=career.slug) }}" class="text-decoration-none">
+        <div class="card h-100 career-card text-center">
+          <div class="card-body py-5">
+            <i class="bi {{ meta.icon }} display-3 career-icon"></i>
+            <h4 class="fw-bold mt-3 mb-2">{{ career.name }}</h4>
+            <span class="text-muted small">Ver materias <i class="bi bi-arrow-right ms-1"></i></span>
+          </div>
+        </div>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+
+<hr class="mt-2 mb-4 opacity-25">
+
+<div class="text-center">
+  <a href="{{ url_for('main.forum_index', faculty_slug=faculty.slug) }}"
+     class="btn px-4 py-2 forum-btn">
+    <i class="bi bi-chat-text me-2"></i>Foro de {{ faculty.name }}<i class="bi bi-arrow-right ms-2"></i>
+  </a>
+</div>
+
+<style>
+.forum-btn {
+  background-color: #081F38;
+  border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.85);
+  transition: border-color .15s, color .15s;
+}
+.forum-btn:hover {
+  border-color: rgba(255,255,255,.4);
+  color: #fff;
+}
+</style>
+{% endblock %}

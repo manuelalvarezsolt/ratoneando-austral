@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% block title %}{{ subject.name }} — Ratoneando Austral{% endblock %}
+
+{# ---- macro: lista de archivos de una categoría hoja ---- #}
+{% macro render_resources(category) %}
+  {% if category.resources %}
+  <div class="list-group list-group-flush">
+    {% for resource in category.sorted_resources %}
+    <div class="list-group-item px-0 d-flex align-items-center gap-3">
+      <i class="bi bi-file-earmark-pdf text-danger fs-5 flex-shrink-0"></i>
+      <div class="flex-grow-1 min-width-0">
+        {% if resource.has_file %}
+        <div class="fw-semibold text-truncate pdf-title"
+             role="button"
+             data-pdf-url="{{ url_for('static', filename=resource.file_path) }}"
+             data-pdf-title="{{ resource.title }}"
+             data-pdf-download="{{ url_for('main.download_resource', resource_id=resource.id) }}">
+          {{ resource.title }}
+        </div>
+        {% else %}
+        <div class="fw-semibold text-truncate">{{ resource.title }}</div>
+        {% endif %}
+        {% if resource.description %}
+          <div class="text-muted small text-truncate">{{ resource.description }}</div>
+        {% endif %}
+        <div class="text-muted small">{{ resource.created_at.strftime('%d/%m/%Y') }}</div>
+      </div>
+      <div class="d-flex gap-2 flex-shrink-0">
+        {% if resource.has_url %}
+        <a href="{{ resource.external_url }}" target="_blank" rel="noopener noreferrer"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+        </a>
+        {% endif %}
+        {% if current_user.is_admin %}
+        <form method="POST" action="{{ url_for('admin.delete_resource', resource_id=resource.id) }}"
+              onsubmit="return confirm('¿Eliminar «{{ resource.title }}»?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-sm btn-outline-danger" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="text-muted small fst-italic mb-0">Sin archivos todavía.</p>
+  {% endif %}
+
+  <div class="mt-2 d-flex gap-2">
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <a href="{{ url_for('admin.upload_to_category', subject_slug=subject.slug, category_slug=category.slug) }}"
+       class="btn btn-sm btn-outline-success">
+      <i class="bi bi-upload me-1"></i>Subir PDF
+    </a>
+    {% elif current_user.is_authenticated %}
+    <a href="{{ url_for('main.contribute', subject_slug=subject.slug, category_slug=category.slug) }}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-plus-circle me-1"></i>Contribuir
+    </a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# ---- macro: botón admin para eliminar una categoría vacía ---- #}
+{% macro delete_category_btn(category) %}
+  {% if current_user.is_authenticated and current_user.is_admin %}
+    {% if category.is_empty %}
+      <form method="POST"
+            action="{{ url_for('admin.delete_category', subject_id=subject.id, category_id=category.id) }}"
+            class="d-inline ms-2"
+            onsubmit="return confirm('¿Eliminar la categoría «{{ category.name }}» de esta materia?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-sm btn-outline-danger border-0 py-0 px-1" title="Eliminar categoría (vacía)">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    {% else %}
+      <i class="bi bi-lock-fill text-muted ms-2 small" title="No se puede eliminar: tiene contenido"></i>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    {% if career.faculty %}
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=career.faculty.slug) }}">{{ career.faculty.name }}</a>
+    </li>
+    {% endif %}
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.career_view', career_slug=career.slug) }}">{{ career.name }}</a>
+    </li>
+    <li class="breadcrumb-item active">{{ subject.name }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-2">
+  <div>
+    <h1 class="fw-bold mb-1">{{ subject.name }}</h1>
+    <p class="text-muted mb-0">
+      {{ year_name }}{% if cuatrimestre_name %} · {{ cuatrimestre_name }}{% endif %}
+    </p>
+  </div>
+</div>
+
+{% if other_careers %}
+<div class="mb-4">
+  <span class="text-muted small me-1">También se cursa en:</span>
+  {% for c in other_careers %}
+    <a href="{{ url_for('main.subject_view', career_slug=c.slug, subject_slug=subject.slug) }}"
+       class="badge bg-light text-dark border text-decoration-none">{{ c.name }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if subject.description %}
+  <p class="mb-4">{{ subject.description }}</p>
+{% endif %}
+
+{# ---- Categorías ---- #}
+<div class="categories">
+  {% for category in categories %}
+
+    {% if category.has_children %}
+    {# Exámenes: carpeta expandible con subcarpetas #}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2" role="button"
+           data-bs-toggle="collapse" data-bs-target="#cat-{{ category.id }}" aria-expanded="false">
+        <i class="bi {{ category.icon }} text-primary"></i>
+        <span class="fw-semibold">{{ category.name }}</span>
+        <span class="badge bg-secondary">{{ category.total_resources }}</span>
+        {{ delete_category_btn(category) }}
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </div>
+      <div class="collapse" id="cat-{{ category.id }}">
+        <div class="card-body">
+          {% for child in category.children %}
+          <div class="mb-4">
+            <div class="d-flex align-items-center gap-2 mb-2" role="button"
+                 data-bs-toggle="collapse" data-bs-target="#subcat-{{ child.id }}" aria-expanded="false">
+              <i class="bi {{ child.icon }} text-muted small"></i>
+              <h6 class="mb-0 text-uppercase text-muted small fw-semibold">{{ child.name }}</h6>
+              <span class="badge bg-light text-dark border">{{ child.resources|length }}</span>
+              {{ delete_category_btn(child) }}
+              <i class="bi bi-chevron-down ms-auto text-muted small"></i>
+            </div>
+            <div class="collapse" id="subcat-{{ child.id }}">
+              {{ render_resources(child) }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    {# Categoría hoja de primer nivel #}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2" role="button"
+           data-bs-toggle="collapse" data-bs-target="#cat-{{ category.id }}" aria-expanded="false">
+        <i class="bi {{ category.icon }} text-primary"></i>
+        <span class="fw-semibold">{{ category.name }}</span>
+        <span class="badge bg-secondary">{{ category.resources|length }}</span>
+        {{ delete_category_btn(category) }}
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </div>
+      <div class="collapse" id="cat-{{ category.id }}">
+        <div class="card-body pb-3">
+          {{ render_resources(category) }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  {% endfor %}
+</div>
+
+{# ---- Modal visor PDF ---- #}
+<div class="modal fade" id="pdfModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold text-truncate me-3" id="pdfModalTitle"></h6>
+        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+          <a id="pdfDownloadBtn" href="#" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-download me-1"></i>Descargar
+          </a>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0" style="height: 82vh;">
+        <iframe id="pdfFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('[data-pdf-url]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('pdfModalTitle').textContent = this.dataset.pdfTitle;
+      document.getElementById('pdfDownloadBtn').href = this.dataset.pdfDownload;
+      document.getElementById('pdfFrame').src = this.dataset.pdfUrl;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('pdfModal')).show();
+    });
+  });
+
+  document.getElementById('pdfModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('pdfFrame').src = '';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Ingresar — Ratoneando Austral{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center pt-4">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="card-title mb-1 fw-bold">Ingresar</h2>
+        <p class="text-muted mb-4">Con tu email de la Universidad Austral</p>
+
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.email.label(class='form-label') }}
+            {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), placeholder='tumail@austral.edu.ar') }}
+            {% for e in form.email.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ form.password.label(class='form-label') }}
+            {{ form.password(class='form-control' + (' is-invalid' if form.password.errors else '')) }}
+            {% for e in form.password.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3 form-check">
+            {{ form.remember(class='form-check-input') }}
+            {{ form.remember.label(class='form-check-label') }}
+          </div>
+
+          {{ form.submit(class='btn btn-primary w-100') }}
+        </form>
+
+        <hr />
+        <p class="text-center mb-0 small">
+          ¿No tenés cuenta? <a href="{{ url_for('auth.register') }}">Registrate</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}{{ resource.title }} — Ratoneando Austral{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    {% if career %}
+      {% if career.faculty %}
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.faculty_view', faculty_slug=career.faculty.slug) }}">{{ career.faculty.name }}</a>
+      </li>
+      {% endif %}
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.career_view', career_slug=career.slug) }}">{{ career.name }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.subject_view', career_slug=career.slug, subject_slug=subject.slug) }}">{{ subject.name }}</a>
+      </li>
+    {% else %}
+      <li class="breadcrumb-item">{{ subject.name }}</li>
+    {% endif %}
+    <li class="breadcrumb-item active">{{ resource.title }}</li>
+  </ol>
+</nav>
+
+<div class="row">
+  <div class="col-lg-8">
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <span class="badge bg-secondary mb-2">{{ resource.category_path }}</span>
+            <h2 class="fw-bold mb-1">{{ resource.title }}</h2>
+            <p class="text-muted small mb-3">
+              Subido el {{ resource.created_at.strftime('%d/%m/%Y') }}
+            </p>
+          </div>
+          {% if current_user.is_authenticated and current_user.is_admin %}
+          <form method="POST" action="{{ url_for('admin.delete_resource', resource_id=resource.id) }}"
+                onsubmit="return confirm('¿Eliminar este recurso?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+        {% if resource.description %}
+          <p class="mb-4">{{ resource.description }}</p>
+        {% endif %}
+
+        <div class="d-flex gap-2 flex-wrap">
+          {% if resource.has_file %}
+          <a href="{{ url_for('static', filename=resource.file_path) }}" class="btn btn-primary" download>
+            <i class="bi bi-download me-1"></i>Descargar archivo
+          </a>
+          {% endif %}
+          {% if resource.has_url %}
+          <a href="{{ resource.external_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir link externo
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Comentarios -->
+    <h4 class="mb-3">
+      <i class="bi bi-chat-text me-2"></i>Comentarios
+      <span class="badge bg-secondary ms-1">{{ comments|length }}</span>
+    </h4>
+
+    {% for comment in comments %}
+    <div class="card mb-3 comment-card">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong class="small">{{ comment.author.name }}</strong>
+            <span class="text-muted small ms-2">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+          </div>
+          {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.is_admin) %}
+          <form method="POST"
+                action="{{ url_for('main.delete_comment', resource_id=resource.id, comment_id=comment.id, carrera=career.slug if career else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button class="btn btn-link btn-sm text-danger p-0" title="Eliminar">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        <p class="mb-0 mt-2">{{ comment.content }}</p>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Todavía no hay comentarios. ¡Sé el primero!</p>
+    {% endfor %}
+
+    {% if current_user.is_authenticated %}
+    <div class="card mt-4">
+      <div class="card-body">
+        <h5 class="card-title">Dejar un comentario</h5>
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.content(class='form-control' + (' is-invalid' if form.content.errors else ''), rows=3, placeholder='Escribí tu comentario...') }}
+            {% for e in form.content.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+          {{ form.submit(class='btn btn-primary') }}
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="card mt-4 bg-light">
+      <div class="card-body text-center text-muted small py-3">
+        <a href="{{ url_for('auth.login') }}">Iniciá sesión</a> para dejar un comentario.
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card bg-light">
+      <div class="card-body small">
+        <h6 class="fw-bold">Materia</h6>
+        <p class="mb-1">
+          {% if career %}
+          <a href="{{ url_for('main.subject_view', career_slug=career.slug, subject_slug=subject.slug) }}">
+            {{ subject.name }}
+          </a>
+          {% else %}
+            {{ subject.name }}
+          {% endif %}
+        </p>
+        {% if subject.careers %}
+        <p class="text-muted mb-0">
+          {% for c in subject.careers %}{{ c.short }}{% if not loop.last %} · {% endif %}{% endfor %}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Contribuciones pendientes — Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="fw-bold mb-0">Contribuciones pendientes</h1>
+    <p class="text-muted mb-0">{{ contributions|length }} solicitud{{ 'es' if contributions|length != 1 }} en cola</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+{% if contributions %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Archivo</th>
+        <th>Materia</th>
+        <th>Categoría</th>
+        <th>Alumno</th>
+        <th>Fecha</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in contributions %}
+      <tr>
+        <td class="fw-semibold">{{ c.title }}</td>
+        <td>{{ c.subject.name }}</td>
+        <td><span class="badge bg-secondary">{{ c.category.name }}</span></td>
+        <td>
+          <span>{{ c.uploader.name }}</span>
+          <div class="text-muted small">{{ c.uploader.email }}</div>
+        </td>
+        <td class="text-muted small">{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="text-end">
+          <div class="d-flex gap-2 justify-content-end">
+            <form method="POST"
+                  action="{{ url_for('admin.approve_contribution', contribution_id=c.id) }}"
+                  onsubmit="return confirm('¿Aprobar «{{ c.title }}»? Se publicará inmediatamente.')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button class="btn btn-sm btn-success">
+                <i class="bi bi-check-lg me-1"></i>Aprobar
+              </button>
+            </form>
+            <form method="POST"
+                  action="{{ url_for('admin.reject_contribution', contribution_id=c.id) }}"
+                  onsubmit="return confirm('¿Rechazar y eliminar «{{ c.title }}»?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-x-lg me-1"></i>Rechazar
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox display-4 text-muted"></i>
+  <p class="text-muted mt-3">No hay contribuciones pendientes.</p>
+</div>
+{% endif %}
+{% endblock %}

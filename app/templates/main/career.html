@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}{{ career.name }} — Ratoneando Austral{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    {% if career.faculty %}
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=career.faculty.slug) }}">{{ career.faculty.name }}</a>
+    </li>
+    {% endif %}
+    <li class="breadcrumb-item active">{{ career.name }}</li>
+  </ol>
+</nav>
+
+<h1 class="fw-bold mb-4">{{ career.name }}</h1>
+
+{% if plan %}
+  {% for year_num in range(1, 6) %}
+    {% if year_num in plan %}
+    <section class="mb-5">
+      <div class="d-flex align-items-center mb-3">
+        <span class="badge bg-primary me-2 fs-6">{{ year_num }}°</span>
+        <h4 class="mb-0 fw-bold">{{ years[year_num] }}</h4>
+      </div>
+
+      {% for cuatri_key, subjects in plan[year_num].items()|sort %}
+        {% if cuatri_key != 0 %}
+        <h6 class="text-muted text-uppercase fw-semibold small mb-2 ms-1">
+          <i class="bi bi-calendar2 me-1"></i>{{ cuatrimestres[cuatri_key] }}
+        </h6>
+        {% endif %}
+        <div class="row g-2 mb-3">
+          {% for subject in subjects %}
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="{{ url_for('main.subject_view', career_slug=career.slug, subject_slug=subject.slug) }}"
+               class="text-decoration-none">
+              <div class="card h-100 subject-card">
+                <div class="card-body py-3 d-flex flex-column">
+                  <h6 class="card-title mb-2">{{ subject.name }}</h6>
+                  <span class="text-primary small fw-semibold mt-auto">
+                    Ver contenido <i class="bi bi-arrow-right"></i>
+                  </span>
+                </div>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <p class="text-muted">No hay materias cargadas para esta carrera.</p>
+{% endif %}
+{% endblock %}

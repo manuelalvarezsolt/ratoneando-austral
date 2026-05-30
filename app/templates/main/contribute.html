@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Contribuir — {{ subject.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    {% if career %}
+      {% if career.faculty %}
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.faculty_view', faculty_slug=career.faculty.slug) }}">{{ career.faculty.name }}</a>
+      </li>
+      {% endif %}
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.career_view', career_slug=career.slug) }}">{{ career.name }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('main.subject_view', career_slug=career.slug, subject_slug=subject.slug) }}">{{ subject.name }}</a>
+      </li>
+    {% else %}
+      <li class="breadcrumb-item">{{ subject.name }}</li>
+    {% endif %}
+    <li class="breadcrumb-item active">Contribuir</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <h2 class="fw-bold mb-1">Contribuir a {{ subject.name }}</h2>
+    <p class="text-muted mb-4">
+      Tu archivo quedará en revisión. El equipo lo publicará una vez verificado.
+    </p>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <div class="mb-4 p-3 bg-light rounded">
+          <div class="small text-muted mb-1">Categoría sugerida</div>
+          <span class="badge bg-secondary fs-6">{{ category.name }}</span>
+          <div class="small text-muted mt-1">Podés cambiarlo con el selector Tipo si corresponde.</div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.title.label(class='form-label fw-semibold') }}
+            {{ form.title(class='form-control' + (' is-invalid' if form.title.errors else ''),
+                          placeholder='Ej: Parcial 1er cuatrimestre 2024') }}
+            {% for e in form.title.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ form.tipo.label(class='form-label fw-semibold') }}
+            {{ form.tipo(class='form-select' + (' is-invalid' if form.tipo.errors else '')) }}
+            {% for e in form.tipo.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4">
+            {{ form.file.label(class='form-label fw-semibold') }}
+            {{ form.file(class='form-control' + (' is-invalid' if form.file.errors else '')) }}
+            {% for e in form.file.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+            <div class="form-text">PDF, DOC, DOCX, PPT, PPTX, TXT, JPG, PNG, XLSX. Máx. 50 MB.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            {{ form.submit(class='btn btn-primary') }}
+            {% if career %}
+            <a href="{{ url_for('main.subject_view', career_slug=career.slug, subject_slug=subject.slug) }}"
+               class="btn btn-outline-secondary">Cancelar</a>
+            {% endif %}
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

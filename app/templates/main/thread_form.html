@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo hilo — {{ faculty.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=faculty.slug) }}">{{ faculty.name }}</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.forum_index', faculty_slug=faculty.slug) }}">Foro</a>
+    </li>
+    <li class="breadcrumb-item active">Nuevo hilo</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h2 class="fw-bold mb-4">Nuevo hilo</h2>
+    <div class="card">
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.title.label(class='form-label fw-semibold') }}
+            {{ form.title(class='form-control' + (' is-invalid' if form.title.errors else ''),
+               placeholder='Título del hilo') }}
+            {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.content.label(class='form-label fw-semibold') }}
+            {{ form.content(class='form-control' + (' is-invalid' if form.content.errors else ''),
+               rows=6, placeholder='Escribí tu pregunta o comentario...') }}
+            {% for e in form.content.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="form-check">
+              {{ form.is_anonymous(class='form-check-input') }}
+              {{ form.is_anonymous.label(class='form-check-label text-muted small') }}
+            </div>
+            {{ form.submit(class='btn btn-primary') }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

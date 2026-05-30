@@ -1,0 +1,50 @@
+import os
+from flask import Flask, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+
+db = SQLAlchemy()
+login_manager = LoginManager()
+csrf = CSRFProtect()
+
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Necesitás iniciar sesión para acceder.'
+login_manager.login_message_category = 'warning'
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config.Config')
+
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+    db.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+
+    from app.auth import auth_bp
+    from app.main import main_bp
+    from app.admin import admin_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+
+    @app.route('/sw.js')
+    def service_worker():
+        resp = send_from_directory(app.static_folder, 'sw.js')
+        resp.headers['Content-Type'] = 'application/javascript'
+        resp.headers['Service-Worker-Allowed'] = '/'
+        resp.headers['Cache-Control'] = 'no-cache'
+        return resp
+
+    @app.context_processor
+    def inject_pending_contributions():
+        from flask_login import current_user
+        if current_user.is_authenticated and current_user.is_admin:
+            from app.models import Contribution
+            return {'pending_contributions': Contribution.query.count()}
+        return {'pending_contributions': 0}
+
+    return app

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{{ thread.title }} — Foro {{ faculty.name }}{% endblock %}
+
+{% macro author_label(post) %}
+  {% if post.is_anonymous %}
+    {% if current_user.is_authenticated and current_user.is_admin %}
+      <strong>{{ post.author.name }}</strong>
+      <span class="text-muted ms-1">(anónimo)</span>
+    {% else %}
+      <strong>Anónimo</strong>
+    {% endif %}
+  {% else %}
+    <strong>{{ post.author.name }}</strong>
+    {% if post.author.is_admin %}
+      <span class="badge bg-primary ms-1" style="font-size:.6rem;vertical-align:middle">Admin</span>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro delete_btn(action_url, confirm_msg) %}
+  {% if current_user.is_authenticated %}
+    <form method="POST" action="{{ action_url }}"
+          onsubmit="return confirm('{{ confirm_msg }}')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-link btn-sm text-danger p-0" title="Eliminar">
+        <i class="bi bi-trash"></i>
+      </button>
+    </form>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Inicio</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=faculty.slug) }}">{{ faculty.name }}</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('main.forum_index', faculty_slug=faculty.slug) }}">Foro</a>
+    </li>
+    <li class="breadcrumb-item active text-truncate" style="max-width:240px">{{ thread.title }}</li>
+  </ol>
+</nav>
+
+{# ---- Hilo original ---- #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-body">
+    <h2 class="fw-bold mb-3">{{ thread.title }}</h2>
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div class="text-muted small">
+        {{ author_label(thread) }}
+        <span class="ms-2">{{ thread.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      {% if current_user.is_authenticated and (thread.author_id == current_user.id or current_user.is_admin) %}
+        {{ delete_btn(
+            url_for('main.delete_thread', faculty_slug=faculty.slug, thread_id=thread.id),
+            '¿Eliminar este hilo y todas sus respuestas?'
+           ) }}
+      {% endif %}
+    </div>
+    <div style="white-space:pre-wrap">{{ thread.content }}</div>
+  </div>
+</div>
+
+{# ---- Respuestas ---- #}
+<h5 class="fw-semibold mb-3">
+  <i class="bi bi-chat-text me-2"></i>
+  {{ replies|length }} respuesta{% if replies|length != 1 %}s{% endif %}
+</h5>
+
+{% for reply in replies %}
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div class="text-muted small">
+        {{ author_label(reply) }}
+        <span class="ms-2">{{ reply.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      {% if current_user.is_authenticated and (reply.author_id == current_user.id or current_user.is_admin) %}
+        {{ delete_btn(
+            url_for('main.delete_reply', faculty_slug=faculty.slug, thread_id=thread.id, reply_id=reply.id),
+            '¿Eliminar esta respuesta?'
+           ) }}
+      {% endif %}
+    </div>
+    <div style="white-space:pre-wrap">{{ reply.content }}</div>
+  </div>
+</div>
+{% else %}
+<p class="text-muted small mb-4">Todavía no hay respuestas. ¡Sé el primero!</p>
+{% endfor %}
+
+{# ---- Formulario de respuesta ---- #}
+<div class="mt-2">
+  {% if current_user.is_authenticated %}
+  <div class="card">
+    <div class="card-body">
+      <h6 class="fw-semibold mb-3">Dejar una respuesta</h6>
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.content(class='form-control' + (' is-invalid' if form.content.errors else ''),
+             rows=4, placeholder='Escribí tu respuesta...') }}
+          {% for e in form.content.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="form-check">
+            {{ form.is_anonymous(class='form-check-input') }}
+            {{ form.is_anonymous.label(class='form-check-label text-muted small') }}
+          </div>
+          {{ form.submit(class='btn btn-primary') }}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="card bg-light">
+    <div class="card-body text-center text-muted small py-3">
+      <a href="{{ url_for('auth.login') }}">Iniciá sesión</a> para dejar una respuesta.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

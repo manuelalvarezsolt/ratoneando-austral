@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Inicio — Ratoneando Austral{% endblock %}
+
+{% set faculty_meta = {
+  'ingenieria':              {'icon': 'bi-gear-wide-connected', 'color': 'primary'},
+  'derecho':                 {'icon': 'bi-building',            'color': 'warning'},
+  'comunicacion':            {'icon': 'bi-megaphone',           'color': 'info'},
+  'ciencias-biomedicas':     {'icon': 'bi-heart-pulse',         'color': 'danger'},
+  'ciencias-empresariales':  {'icon': 'bi-briefcase',           'color': 'success'},
+  'gobierno':                {'icon': 'bi-globe',               'color': 'dark'}
+} %}
+
+{% block content %}
+<div class="text-center mb-5">
+  <h1 class="fw-bold mb-1">Elegí tu facultad</h1>
+  <p class="text-muted mb-0">Materiales académicos organizados por carrera, año y materia</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+  {% for faculty in faculties %}
+    {% set meta = faculty_meta.get(faculty.slug, {'icon': 'bi-mortarboard', 'color': 'primary'}) %}
+    <div class="col-md-6 col-lg-4">
+      <a href="{{ url_for('main.faculty_view', faculty_slug=faculty.slug) }}" class="text-decoration-none">
+        <div class="card h-100 career-card text-center">
+          <div class="card-body py-5">
+            <i class="bi {{ meta.icon }} display-3 career-icon"></i>
+            <h4 class="fw-bold mt-3 mb-2">{{ faculty.name }}</h4>
+          </div>
+        </div>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
