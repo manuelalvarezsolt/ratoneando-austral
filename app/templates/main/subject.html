@@ -3,6 +3,20 @@
 
 {# ---- macro: lista de archivos de una categoría hoja ---- #}
 {% macro render_resources(category) %}
+  <div class="mb-3">
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <a href="{{ url_for('admin.upload_to_category', subject_slug=subject.slug, category_slug=category.slug) }}"
+       class="btn btn-sm btn-outline-success">
+      <i class="bi bi-upload me-1"></i>Subir PDF
+    </a>
+    {% else %}
+    <a href="{{ url_for('main.contribute', subject_slug=subject.slug, category_slug=category.slug) if current_user.is_authenticated else url_for('auth.login') }}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-plus-circle me-1"></i>Añadir contenido
+    </a>
+    {% endif %}
+  </div>
+
   {% if category.resources %}
   <div class="list-group list-group-flush">
     {% for resource in category.sorted_resources %}
@@ -48,20 +62,6 @@
   {% else %}
     <p class="text-muted small fst-italic mb-0">Sin archivos todavía.</p>
   {% endif %}
-
-  <div class="mt-2 d-flex gap-2">
-    {% if current_user.is_authenticated and current_user.is_admin %}
-    <a href="{{ url_for('admin.upload_to_category', subject_slug=subject.slug, category_slug=category.slug) }}"
-       class="btn btn-sm btn-outline-success">
-      <i class="bi bi-upload me-1"></i>Subir PDF
-    </a>
-    {% elif current_user.is_authenticated %}
-    <a href="{{ url_for('main.contribute', subject_slug=subject.slug, category_slug=category.slug) }}"
-       class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-plus-circle me-1"></i>Contribuir
-    </a>
-    {% endif %}
-  </div>
 {% endmacro %}
 
 {# ---- macro: botón admin para eliminar una categoría vacía ---- #}
