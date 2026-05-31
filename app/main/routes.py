@@ -58,6 +58,7 @@ def subject_view(career_slug, subject_slug):
         abort(404)  # esa materia no pertenece a esta carrera
 
     other_careers = [c for c in subject.careers if c.id != career.id]
+    contrib_form = ContributionForm() if current_user.is_authenticated and not current_user.is_admin else None
 
     return render_template(
         'main/subject.html',
@@ -68,6 +69,7 @@ def subject_view(career_slug, subject_slug):
         categories=subject.top_categories,
         year_name=YEARS.get(link.year, f'Año {link.year}'),
         cuatrimestre_name=CUATRIMESTRES.get(link.cuatrimestre) if link.cuatrimestre else None,
+        contrib_form=contrib_form,
     )
 
 

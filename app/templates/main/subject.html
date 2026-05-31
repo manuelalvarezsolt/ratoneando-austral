@@ -3,20 +3,6 @@
 
 {# ---- macro: lista de archivos de una categoría hoja ---- #}
 {% macro render_resources(category) %}
-  <div class="mb-3">
-    {% if current_user.is_authenticated and current_user.is_admin %}
-    <a href="{{ url_for('admin.upload_to_category', subject_slug=subject.slug, category_slug=category.slug) }}"
-       class="btn btn-sm btn-outline-success">
-      <i class="bi bi-upload me-1"></i>Subir PDF
-    </a>
-    {% else %}
-    <a href="{{ url_for('main.contribute', subject_slug=subject.slug, category_slug=category.slug) if current_user.is_authenticated else url_for('auth.login') }}"
-       class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-plus-circle me-1"></i>Añadir contenido
-    </a>
-    {% endif %}
-  </div>
-
   {% if category.resources %}
   <div class="list-group list-group-flush">
     {% for resource in category.sorted_resources %}
@@ -61,6 +47,14 @@
   </div>
   {% else %}
     <p class="text-muted small fst-italic mb-0">Sin archivos todavía.</p>
+  {% endif %}
+  {% if current_user.is_authenticated and current_user.is_admin %}
+  <div class="mt-2">
+    <a href="{{ url_for('admin.upload_to_category', subject_slug=subject.slug, category_slug=category.slug) }}"
+       class="btn btn-sm btn-outline-success">
+      <i class="bi bi-upload me-1"></i>Subir PDF
+    </a>
+  </div>
   {% endif %}
 {% endmacro %}
 
@@ -122,6 +116,22 @@
   <p class="mb-4">{{ subject.description }}</p>
 {% endif %}
 
+<div class="mb-4">
+  {% if current_user.is_authenticated and not current_user.is_admin %}
+  <button type="button" class="btn btn-link btn-sm text-primary-emphasis px-0 text-decoration-none"
+          data-bs-toggle="modal" data-bs-target="#contribuirModal"
+          style="font-size:.82rem;opacity:.75">
+    <i class="bi bi-plus-circle me-1"></i>Añadir contenido
+  </button>
+  {% elif not current_user.is_authenticated %}
+  <a href="{{ url_for('auth.login', next=request.path) }}"
+     class="btn btn-link btn-sm text-primary-emphasis px-0 text-decoration-none"
+     style="font-size:.82rem;opacity:.75">
+    <i class="bi bi-plus-circle me-1"></i>Añadir contenido
+  </a>
+  {% endif %}
+</div>
+
 {# ---- Categorías ---- #}
 <div class="categories">
   {% for category in categories %}
@@ -179,6 +189,49 @@
 
   {% endfor %}
 </div>
+
+{# ---- Modal contribución ---- #}
+{% if contrib_form %}
+<div class="modal fade" id="contribuirModal" tabindex="-1" aria-labelledby="contribuirModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold" id="contribuirModalLabel">
+          <i class="bi bi-plus-circle me-2 text-primary"></i>Añadir contenido
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST"
+            action="{{ url_for('main.contribute', subject_slug=subject.slug, category_slug='otros') }}"
+            enctype="multipart/form-data" novalidate>
+        {{ contrib_form.hidden_tag() }}
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            Tu archivo quedará en revisión. El equipo lo publicará una vez verificado.
+          </p>
+          <div class="mb-3">
+            {{ contrib_form.title.label(class='form-label fw-semibold') }}
+            {{ contrib_form.title(class='form-control', placeholder='Ej: Parcial 1er cuatrimestre 2024') }}
+          </div>
+          <div class="mb-3">
+            {{ contrib_form.tipo.label(class='form-label fw-semibold') }}
+            {{ contrib_form.tipo(class='form-select') }}
+          </div>
+          <div class="mb-1">
+            {{ contrib_form.file.label(class='form-label fw-semibold') }}
+            {{ contrib_form.file(class='form-control') }}
+            <div class="form-text">PDF, DOC, DOCX, PPT, PPTX, TXT, JPG, PNG, XLSX. Máx. 50 MB.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          {{ contrib_form.submit(class='btn btn-primary btn-sm') }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {# ---- Modal visor PDF ---- #}
 <div class="modal fade" id="pdfModal" tabindex="-1" aria-hidden="true">
