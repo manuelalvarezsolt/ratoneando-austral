@@ -1,10 +1,10 @@
 import os
-from flask import render_template, redirect, url_for, flash, abort, request, current_app, send_from_directory
+from flask import render_template, redirect, url_for, flash, abort, request, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.main import main_bp
 from app.main.forms import CommentForm, ContributionForm, ThreadForm, ReplyForm
-from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply
+from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket
 from app.utils import slugify, save_uploaded_file
 
 
@@ -165,7 +165,7 @@ def contribute(subject_slug, category_slug):
             uploaded_by_id=current_user.id,
         ))
         db.session.commit()
-        flash('¡Gracias! Tu contribución está en revisión y se publicará una vez aprobada.', 'success')
+        flash('¡Gracias por aportar a Ratoneando Austral! Tu archivo será revisado por un administrador.', 'success')
         if career:
             return redirect(url_for('main.subject_view',
                                     career_slug=career.slug,
@@ -258,3 +258,18 @@ def delete_reply(faculty_slug, thread_id, reply_id):
     flash('Respuesta eliminada.', 'success')
     return redirect(url_for('main.view_thread',
                             faculty_slug=faculty_slug, thread_id=thread_id))
+
+
+@main_bp.route('/soporte', methods=['POST'])
+def submit_support():
+    message = request.form.get('message', '').strip()
+    if not message:
+        return jsonify({'ok': False, 'error': 'El mensaje es requerido.'}), 400
+    ticket = SupportTicket(
+        name=request.form.get('name', '').strip() or None,
+        email=request.form.get('email', '').strip() or None,
+        message=message,
+    )
+    db.session.add(ticket)
+    db.session.commit()
+    return jsonify({'ok': True})

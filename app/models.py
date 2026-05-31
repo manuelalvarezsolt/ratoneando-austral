@@ -388,6 +388,19 @@ class ForumReply(db.Model):
         return f'<ForumReply {self.id} on thread {self.thread_id}>'
 
 
+class SupportTicket(db.Model):
+    __tablename__ = 'support_tickets'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    name       = db.Column(db.String(100))
+    email      = db.Column(db.String(120))
+    message    = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<SupportTicket {self.id}>'
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))

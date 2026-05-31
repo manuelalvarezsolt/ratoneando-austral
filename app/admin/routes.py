@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.admin import admin_bp
 from app.admin.forms import SubjectForm, UploadForm, ResourceForm
-from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution
+from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket
 from app.utils import slugify, save_uploaded_file, delete_uploaded_file
 
 
@@ -91,6 +91,7 @@ def dashboard():
         subjects_count=Subject.query.count(),
         resources_count=Resource.query.count(),
         contributions_count=Contribution.query.count(),
+        support_count=SupportTicket.query.count(),
         recent_resources=recent_resources,
         uploads_size=_uploads_size(),
     )
@@ -330,3 +331,12 @@ def reject_contribution(contribution_id):
     db.session.commit()
     flash(f'Contribución "{title}" rechazada y eliminada.', 'info')
     return redirect(url_for('admin.list_contributions'))
+
+
+# ── Soporte ───────────────────────────────────────────────────────────────────
+
+@admin_bp.route('/soporte')
+@admin_required
+def list_support():
+    tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
+    return render_template('admin/support.html', tickets=tickets)
