@@ -12,15 +12,18 @@ class SubjectForm(FlaskForm):
     submit = SubmitField('Guardar materia')
 
 
+_ALLOWED_ADMIN_EXT = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
+
+
 class UploadForm(FlaskForm):
     """Formulario de subida contextual (subject + category ya vienen de la URL)."""
     title = StringField('Título / Nombre del archivo', validators=[DataRequired(), Length(min=2, max=200)])
     description = TextAreaField('Descripción (opcional)', validators=[Optional(), Length(max=500)])
     file = FileField(
-        'Archivo PDF',
+        'Archivo',
         validators=[
-            DataRequired(message='Seleccioná un archivo PDF.'),
-            FileAllowed(['pdf'], 'Solo se permiten archivos PDF.'),
+            DataRequired(message='Seleccioná un archivo.'),
+            FileAllowed(_ALLOWED_ADMIN_EXT, 'Formato no permitido. Usá PDF, DOC, DOCX, JPG o PNG.'),
         ],
     )
     submit = SubmitField('Subir')
@@ -33,10 +36,10 @@ class ResourceForm(FlaskForm):
     category = SelectField('Categoría', choices=LEAF_CATEGORY_CHOICES, validators=[DataRequired()])
     description = TextAreaField('Descripción (opcional)', validators=[Optional(), Length(max=1000)])
     file = FileField(
-        'Archivo PDF',
+        'Archivo',
         validators=[
             Optional(),
-            FileAllowed(['pdf'], 'Solo se permiten archivos PDF.'),
+            FileAllowed(_ALLOWED_ADMIN_EXT, 'Formato no permitido. Usá PDF, DOC, DOCX, JPG o PNG.'),
         ],
     )
     external_url = URLField('O pegá un link externo (Drive, etc.)', validators=[Optional(), URL()])
