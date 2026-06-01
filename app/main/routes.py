@@ -79,8 +79,8 @@ def download_resource(resource_id):
     if not resource.has_file:
         abort(404)
     static_dir = os.path.join(current_app.root_path, 'static')
-    # Nombre de descarga legible: título slugificado + .pdf
-    download_name = slugify(resource.title) + '.pdf'
+    _, ext = os.path.splitext(resource.file_path)
+    download_name = slugify(resource.title) + ext
     return send_from_directory(static_dir, resource.file_path,
                                as_attachment=True, download_name=download_name)
 
