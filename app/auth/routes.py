@@ -2,7 +2,7 @@ from urllib.parse import urlparse, urljoin
 from markupsafe import Markup
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
+from app import db, limiter
 from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.models import User
@@ -28,6 +28,7 @@ def _safe_next(target):
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit('8 per minute; 40 per hour', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -43,6 +44,7 @@ def login():
 
 
 @auth_bp.route('/registro', methods=['GET', 'POST'])
+@limiter.limit('5 per minute; 20 per hour', methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -84,6 +86,7 @@ def verify_email(token):
 
 
 @auth_bp.route('/reenviar-verificacion')
+@limiter.limit('3 per minute; 15 per hour')
 def resend_verification():
     email = request.args.get('email', '').lower().strip()
     if not email:

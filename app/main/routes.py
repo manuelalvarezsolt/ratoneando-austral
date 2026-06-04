@@ -1,7 +1,7 @@
 import os
 from flask import render_template, redirect, url_for, flash, abort, request, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
-from app import db
+from app import db, limiter
 from app.main import main_bp
 from app.main.forms import CommentForm, ContributionForm, ThreadForm, ReplyForm
 from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket, SiteConfig
@@ -268,6 +268,7 @@ def delete_reply(faculty_slug, thread_id, reply_id):
 
 
 @main_bp.route('/soporte', methods=['POST'])
+@limiter.limit('5 per minute; 20 per hour')
 def submit_support():
     message = request.form.get('message', '').strip()
     if not message:

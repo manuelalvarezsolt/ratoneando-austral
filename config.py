@@ -20,6 +20,10 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
 
+    # Rate limiting (Flask-Limiter). 'memory://' sirve para 1 proceso;
+    # para varios workers usar Redis: RATELIMIT_STORAGE_URI=redis://localhost:6379
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
