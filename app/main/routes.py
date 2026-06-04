@@ -6,6 +6,7 @@ from app.main import main_bp
 from app.main.forms import CommentForm, ContributionForm, ThreadForm, ReplyForm
 from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket
 from app.utils import slugify, save_uploaded_file
+from app.email import send_contribution_notification
 
 
 YEARS = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año'}
@@ -157,14 +158,19 @@ def contribute(subject_slug, category_slug):
         ).first() or category
 
         file_path = save_uploaded_file(form.file.data, subject.slug, target.slug)
-        db.session.add(Contribution(
+        contribution = Contribution(
             title=form.title.data.strip(),
             file_path=file_path,
             subject_id=subject.id,
             category_id=target.id,
             uploaded_by_id=current_user.id,
-        ))
+        )
+        db.session.add(contribution)
         db.session.commit()
+        try:
+            send_contribution_notification(contribution)
+        except Exception:
+            pass
         flash('¡Gracias por aportar a Ratoneando Austral! Tu archivo será revisado por un administrador.', 'success')
         if career:
             return redirect(url_for('main.subject_view',

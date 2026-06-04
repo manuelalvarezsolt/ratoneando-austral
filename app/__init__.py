@@ -3,10 +3,12 @@ from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from flask_mail import Mail
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+mail = Mail()
 
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Necesitás iniciar sesión para acceder.'
@@ -22,14 +24,17 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    mail.init_app(app)
 
     from app.auth import auth_bp
     from app.main import main_bp
     from app.admin import admin_bp
+    from app.moderator import moderator_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(moderator_bp, url_prefix='/moderador')
 
     @app.route('/sw.js')
     def service_worker():
@@ -42,7 +47,7 @@ def create_app():
     @app.context_processor
     def inject_pending_contributions():
         from flask_login import current_user
-        if current_user.is_authenticated and current_user.is_admin:
+        if current_user.is_authenticated and (current_user.is_admin or current_user.is_moderator):
             from app.models import Contribution
             return {'pending_contributions': Contribution.query.count()}
         return {'pending_contributions': 0}

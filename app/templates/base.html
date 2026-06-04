@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" style="background-color:#060F18">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ratoneando">
   <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+  <link rel="icon" type="image/png" href="/static/icons/logo.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,16 +32,6 @@
 </head>
 <body>
 
-<!-- Splash screen (solo en modo standalone) -->
-<div id="ra-splash" aria-hidden="true"
-     style="display:none;position:fixed;inset:0;background:#060F18;z-index:9999;
-            flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <img src="/static/icons/icon-192.png" width="88" height="88"
-       style="border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.6)">
-  <span style="color:#E6EDF3;font-size:1.2rem;font-weight:700;letter-spacing:-.02em">
-    Ratoneando Austral
-  </span>
-</div>
 
 <nav class="navbar navbar-expand-lg navbar-dark">
   <div class="container position-relative">
@@ -51,9 +42,10 @@
       💬 Soporte
     </a>
 
-    <a class="navbar-brand" href="{{ url_for('main.index') }}">
+    <a class="navbar-brand" href="{{ url_for('main.index') }}" style="display:flex;align-items:center;gap:4px">
+      <img src="{{ url_for('static', filename='icons/logo-transparent.png') }}" alt="Logo" style="height:1.4em;width:auto;display:block;flex-shrink:0">
       Ratoneando Austral
-      <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;vertical-align:middle;margin-left:5px">v1.0 beta</span>
+      <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;margin-left:3px">v1.0 beta</span>
     </a>
 
     {% if not current_user.is_authenticated %}
@@ -85,6 +77,16 @@
           <li class="nav-item">
             <a class="nav-link position-relative" href="{{ url_for('admin.dashboard') }}">
               <i class="bi bi-shield-check me-1"></i>Admin
+              {% if pending_contributions > 0 %}
+              <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle rounded-pill"
+                    style="font-size:.6rem">{{ pending_contributions }}</span>
+              {% endif %}
+            </a>
+          </li>
+          {% elif current_user.is_moderator %}
+          <li class="nav-item">
+            <a class="nav-link position-relative" href="{{ url_for('moderator.dashboard') }}">
+              <i class="bi bi-shield me-1"></i>Moderador
               {% if pending_contributions > 0 %}
               <span class="badge bg-warning text-dark position-absolute top-0 start-100 translate-middle rounded-pill"
                     style="font-size:.6rem">{{ pending_contributions }}</span>
@@ -260,20 +262,23 @@
 (function () {
   'use strict';
 
-  // ── Splash screen ──────────────────────────────────────────
-  var splash = document.getElementById('ra-splash');
-  var standalone = window.navigator.standalone ||
-                   window.matchMedia('(display-mode: standalone)').matches;
-  if (splash && standalone) {
-    splash.style.display = 'flex';
-    setTimeout(function () {
-      splash.style.transition = 'opacity .35s ease';
-      splash.style.opacity = '0';
-      setTimeout(function () { splash.remove(); }, 380);
-    }, 1400);
-  } else if (splash) {
-    splash.remove();
-  }
+  // ── Scroll to top on every navigation ─────────────────────
+  if (history.scrollRestoration) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+
+  // ── Close hamburger menu when a nav link is tapped ─────────
+  document.addEventListener('DOMContentLoaded', function () {
+    var navMenu = document.getElementById('navMenu');
+    if (!navMenu) return;
+    navMenu.querySelectorAll('.nav-link:not(.dropdown-toggle)').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (navMenu.classList.contains('show')) {
+          var bsCollapse = bootstrap.Collapse.getInstance(navMenu);
+          if (bsCollapse) bsCollapse.hide();
+        }
+      });
+    });
+  });
 
   // ── Service worker ─────────────────────────────────────────
   if ('serviceWorker' in navigator) {

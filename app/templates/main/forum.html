@@ -13,6 +13,8 @@
     <strong>{{ post.author.name }}</strong>
     {% if post.author.is_admin %}
       <span class="badge bg-primary ms-1" style="font-size:.6rem;vertical-align:middle">Admin</span>
+    {% elif post.author.is_frequent_contributor %}
+      <span class="badge ms-1" style="font-size:.55rem;vertical-align:middle;background:rgba(91,155,213,0.12);color:#5B9BD5;border:1px solid rgba(91,155,213,0.25)">Aportador Frecuente</span>
     {% endif %}
   {% endif %}
 {% endmacro %}

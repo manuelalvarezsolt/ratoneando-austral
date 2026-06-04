@@ -714,8 +714,31 @@ def ensure_categories():
     return created
 
 
+def _migrate_schema(app):
+    """Añade columnas nuevas a tablas existentes (SQLite no soporta ALTER vía ORM)."""
+    from sqlalchemy import text
+    with app.app_context():
+        with db.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(users)"))
+            columns = [row[1] for row in result]
+            if 'is_moderator' not in columns:
+                conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN is_moderator BOOLEAN NOT NULL DEFAULT 0"
+                ))
+                conn.commit()
+                print('Columna is_moderator añadida.')
+            if 'is_verified' not in columns:
+                # DEFAULT 1: usuarios existentes quedan verificados automáticamente
+                conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT 1"
+                ))
+                conn.commit()
+                print('Columna is_verified añadida (usuarios existentes marcados como verificados).')
+
+
 def init():
     app = create_app()
+    _migrate_schema(app)
     with app.app_context():
         db.create_all()
         print('Tablas creadas.')
@@ -723,7 +746,7 @@ def init():
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@austral.edu.ar')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
         if not User.query.filter_by(email=admin_email).first():
-            admin = User(name='Admin', email=admin_email, is_admin=True)
+            admin = User(name='Admin', email=admin_email, is_admin=True, is_verified=True)
             admin.set_password(admin_password)
             db.session.add(admin)
             print(f'Admin creado: {admin_email}')

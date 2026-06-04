@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.admin import admin_bp
 from app.admin.forms import SubjectForm, UploadForm, ResourceForm
-from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket
+from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket, User
 from app.utils import slugify, save_uploaded_file, delete_uploaded_file
 
 
@@ -331,6 +331,36 @@ def reject_contribution(contribution_id):
     db.session.commit()
     flash(f'Contribución "{title}" rechazada y eliminada.', 'info')
     return redirect(url_for('admin.list_contributions'))
+
+
+# ── Usuarios ─────────────────────────────────────────────────────────────────
+
+@admin_bp.route('/usuarios')
+@admin_required
+def list_users():
+    q = request.args.get('q', '').strip()
+    query = User.query
+    if q:
+        pattern = f'%{q}%'
+        query = query.filter(
+            db.or_(User.name.ilike(pattern), User.email.ilike(pattern))
+        )
+    users = query.order_by(User.created_at.desc()).all()
+    return render_template('admin/users.html', users=users, q=q)
+
+
+@admin_bp.route('/usuarios/<int:user_id>/toggle-moderador', methods=['POST'])
+@admin_required
+def toggle_moderador(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_admin:
+        flash('No se puede modificar el rol de un administrador.', 'danger')
+        return redirect(url_for('admin.list_users'))
+    user.is_moderator = not user.is_moderator
+    db.session.commit()
+    action = 'asignado' if user.is_moderator else 'removido'
+    flash(f'Rol de moderador {action} a {user.name}.', 'success')
+    return redirect(url_for('admin.list_users') + (f'?q={request.form.get("q", "")}' if request.form.get('q') else ''))
 
 
 # ── Soporte ───────────────────────────────────────────────────────────────────

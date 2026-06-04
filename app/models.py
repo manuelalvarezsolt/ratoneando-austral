@@ -14,10 +14,16 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    is_moderator = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
+    is_verified = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
     uploaded_resources = db.relationship('Resource', backref='uploader', lazy='dynamic')
+
+    @property
+    def is_frequent_contributor(self):
+        return self.uploaded_resources.count() >= 5
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

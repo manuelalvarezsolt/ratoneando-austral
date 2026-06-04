@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Subir recurso — Moderador{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{{ url_for('moderator.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h1 class="fw-bold mb-0">Subir recurso</h1>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.title.label(class='form-label') }}
+            {{ form.title(class='form-control' + (' is-invalid' if form.title.errors else '')) }}
+            {% for e in form.title.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.subject_id.label(class='form-label') }}
+              {{ form.subject_id(class='form-select' + (' is-invalid' if form.subject_id.errors else '')) }}
+              {% for e in form.subject_id.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.category.label(class='form-label') }}
+              {{ form.category(class='form-select' + (' is-invalid' if form.category.errors else '')) }}
+              {% for e in form.category.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            {{ form.description.label(class='form-label') }}
+            {{ form.description(class='form-control', rows=3, placeholder='Descripción opcional…') }}
+          </div>
+
+          <hr />
+          <p class="text-muted small mb-3">Subí un archivo <strong>o</strong> pegá un link externo.</p>
+
+          <div class="mb-3">
+            {{ form.file.label(class='form-label') }}
+            {{ form.file(class='form-control' + (' is-invalid' if form.file.errors else '')) }}
+            <div class="form-text">PDF, DOCX, PPTX, TXT — máx. 50 MB</div>
+            {% for e in form.file.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4">
+            {{ form.external_url.label(class='form-label') }}
+            {{ form.external_url(class='form-control' + (' is-invalid' if form.external_url.errors else ''), placeholder='https://drive.google.com/…') }}
+            {% for e in form.external_url.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex gap-2">
+            {{ form.submit(class='btn btn-primary') }}
+            <a href="{{ url_for('moderator.dashboard') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
