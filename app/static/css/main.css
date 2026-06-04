@@ -254,14 +254,20 @@ footer { border-top-color: var(--border) !important; color: var(--text-sec); fon
 .career-card {
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   color: var(--text-main);
+  will-change: transform;
 }
 .career-card:hover {
   border-color: var(--accent) !important;
-  transform: translateY(-4px);
-  box-shadow: 0 10px 32px rgba(26,74,122,0.28);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 36px rgba(26,74,122,0.32);
   color: var(--text-main);
+}
+a:active .career-card {
+  transform: scale(0.98) !important;
+  box-shadow: 0 2px 10px rgba(26,74,122,0.15) !important;
+  transition-duration: 0.1s !important;
 }
 .career-icon { color: var(--accent); }
 
@@ -269,13 +275,19 @@ footer { border-top-color: var(--border) !important; color: var(--text-sec); fon
 .subject-card {
   border: 1px solid var(--border) !important;
   border-radius: 10px !important;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   color: var(--text-main);
+  will-change: transform;
 }
 .subject-card:hover {
   border-color: var(--accent) !important;
   box-shadow: 0 4px 18px rgba(26,74,122,0.22);
+  transform: translateY(-2px);
   color: var(--text-main);
+}
+a:active .subject-card {
+  transform: scale(0.99) !important;
+  transition-duration: 0.1s !important;
 }
 
 /* ── Resource & comment cards ───────────────────────────────── */
@@ -289,6 +301,59 @@ footer { border-top-color: var(--border) !important; color: var(--text-sec); fon
 /* ── PDF title (clickable resource) ────────────────────────── */
 .pdf-title       { cursor: pointer; }
 .pdf-title:hover { text-decoration: underline; }
+
+/* ── Growth banner (index) ──────────────────────────────────── */
+.growth-banner {
+  position: relative;
+  background: rgba(26,74,122,0.18);
+  border: 1px solid rgba(91,155,213,0.18);
+  border-radius: 10px;
+  padding: 0.55rem 2.75rem 0.55rem 1.25rem;
+  margin-bottom: 2rem;
+  font-size: 0.83rem;
+  color: var(--text-sec);
+  text-align: center;
+  line-height: 1.5;
+}
+.growth-banner strong { color: var(--text-main); }
+.growth-banner-close {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  color: var(--text-sec);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+.growth-banner-close:hover,
+.growth-banner-close:focus { opacity: 1; outline: none; box-shadow: none; }
+
+/* ── Navbar buttons: glow on hover ─────────────────────────── */
+.navbar .btn {
+  transition: box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.navbar .btn:hover {
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.25);
+}
+
+/* ── Collapse: transición suave ─────────────────────────────── */
+.collapsing {
+  transition: height 0.2s ease-out !important;
+}
+.card-header[data-bs-toggle="collapse"] {
+  transition: background-color 0.15s ease;
+}
+.card-header[data-bs-toggle="collapse"]:hover {
+  background-color: rgba(26,74,122,0.12);
+}
 
 /* ── Mobile (<768px) ────────────────────────────────────────── */
 @media (max-width: 767.98px) {

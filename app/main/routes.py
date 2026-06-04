@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.main import main_bp
 from app.main.forms import CommentForm, ContributionForm, ThreadForm, ReplyForm
-from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket
+from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket, SiteConfig
 from app.utils import slugify, save_uploaded_file
 from app.email import send_contribution_notification
 
@@ -16,7 +16,8 @@ CUATRIMESTRES = {1: '1° Cuatrimestre', 2: '2° Cuatrimestre'}
 @main_bp.route('/')
 def index():
     faculties = Faculty.query.order_by(Faculty.order).all()
-    return render_template('main/index.html', faculties=faculties)
+    announcement = SiteConfig.get('announcement')
+    return render_template('main/index.html', faculties=faculties, announcement=announcement)
 
 
 @main_bp.route('/facultad/<faculty_slug>')

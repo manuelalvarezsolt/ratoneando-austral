@@ -740,7 +740,7 @@ def init():
     app = create_app()
     _migrate_schema(app)
     with app.app_context():
-        db.create_all()
+        db.create_all()  # crea tablas nuevas (site_config, etc.) sin tocar las existentes
         print('Tablas creadas.')
 
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@austral.edu.ar')

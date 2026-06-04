@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.admin import admin_bp
 from app.admin.forms import SubjectForm, UploadForm, ResourceForm
-from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket, User
+from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket, User, SiteConfig
 from app.utils import slugify, save_uploaded_file, delete_uploaded_file
 
 
@@ -94,7 +94,18 @@ def dashboard():
         support_count=SupportTicket.query.count(),
         recent_resources=recent_resources,
         uploads_size=_uploads_size(),
+        announcement=SiteConfig.get('announcement'),
     )
+
+
+@admin_bp.route('/anuncio', methods=['POST'])
+@admin_required
+def save_announcement():
+    text = request.form.get('announcement', '').strip()
+    SiteConfig.set('announcement', text)
+    db.session.commit()
+    flash('Anuncio actualizado.' if text else 'Anuncio eliminado.', 'success')
+    return redirect(url_for('admin.dashboard'))
 
 
 @admin_bp.route('/materias')

@@ -22,10 +22,16 @@
 
           <div class="mb-3">
             {{ form.password.label(class='form-label') }}
-            {{ form.password(class='form-control' + (' is-invalid' if form.password.errors else '')) }}
-            {% for e in form.password.errors %}
-              <div class="invalid-feedback">{{ e }}</div>
-            {% endfor %}
+            <div class="input-group">
+              {{ form.password(class='form-control' + (' is-invalid' if form.password.errors else ''), id='passwordInput') }}
+              <button class="btn btn-outline-secondary" type="button" id="togglePassword"
+                      tabindex="-1" aria-label="Mostrar/ocultar contraseña">
+                <i class="bi bi-eye" id="toggleIcon"></i>
+              </button>
+              {% for e in form.password.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
           </div>
 
           <div class="mb-3 form-check">
@@ -44,4 +50,20 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var btn   = document.getElementById('togglePassword');
+  var input = document.getElementById('passwordInput');
+  var icon  = document.getElementById('toggleIcon');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+  });
+}());
+</script>
 {% endblock %}

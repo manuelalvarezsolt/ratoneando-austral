@@ -52,4 +52,7 @@ def create_app():
             return {'pending_contributions': Contribution.query.count()}
         return {'pending_contributions': 0}
 
+    with app.app_context():
+        db.create_all()
+
     return app

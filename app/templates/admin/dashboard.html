@@ -94,6 +94,32 @@
   </div>
 </div>
 
+<h4 class="mb-3">Mensaje de anuncio</h4>
+<div class="card shadow-sm mb-5">
+  <div class="card-body p-4">
+    <p class="text-muted small mb-3">
+      El texto que escribas acá aparece en el banner de la página de inicio para todos los usuarios.
+      Dejá el campo vacío para ocultar el banner.
+    </p>
+    <form method="POST" action="{{ url_for('admin.save_announcement') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="mb-3">
+        <textarea name="announcement" class="form-control" rows="3"
+                  placeholder="Ej: Hay un examen de Análisis I el jueves — subí tu resumen y ayudá a tus compañeros."
+        >{{ announcement }}</textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Guardar anuncio</button>
+        {% if announcement %}
+        <button type="submit" name="announcement" value="" class="btn btn-outline-secondary btn-sm">
+          Eliminar banner
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
 <h4 class="mb-3">Últimos recursos subidos</h4>
 {% if recent_resources %}
 <div class="table-responsive">
