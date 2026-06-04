@@ -6,11 +6,13 @@ from flask_wtf.csrf import CSRFProtect
 from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_migrate import Migrate
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 mail = Mail()
+migrate = Migrate()
 # Sin límite global por defecto; cada ruta sensible declara el suyo con @limiter.limit.
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
@@ -30,6 +32,9 @@ def create_app():
     csrf.init_app(app)
     mail.init_app(app)
     limiter.init_app(app)
+    # Importamos los modelos para que Alembic los vea al autogenerar migraciones.
+    from app import models  # noqa: F401
+    migrate.init_app(app, db)
 
     from app.auth import auth_bp
     from app.main import main_bp
@@ -64,8 +69,5 @@ def create_app():
             from app.models import Contribution
             return {'pending_contributions': Contribution.query.count()}
         return {'pending_contributions': 0}
-
-    with app.app_context():
-        db.create_all()
 
     return app

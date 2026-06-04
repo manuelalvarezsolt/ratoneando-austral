@@ -7,6 +7,7 @@ from app.admin import admin_bp
 from app.admin.forms import SubjectForm, UploadForm, ResourceForm
 from app.models import Career, Subject, CareerSubject, Category, Resource, Contribution, SupportTicket, User, SiteConfig
 from app.utils import slugify, save_uploaded_file, delete_uploaded_file
+from app.services import publish_contribution, discard_contribution, subject_choices
 
 
 def admin_required(f):
@@ -175,15 +176,6 @@ def delete_subject(subject_id):
     return redirect(url_for('admin.list_subjects'))
 
 
-def _subject_choices():
-    choices = []
-    for s in Subject.query.order_by(Subject.name).all():
-        careers = ', '.join(c.short for c in s.careers)
-        label = f'{s.name} ({careers})' if careers else s.name
-        choices.append((s.id, label))
-    return choices
-
-
 @admin_bp.route('/subir/<subject_slug>/<category_slug>', methods=['GET', 'POST'])
 @admin_required
 def upload_to_category(subject_slug, category_slug):
@@ -230,7 +222,7 @@ def upload_to_category(subject_slug, category_slug):
 def new_resource():
     """Subida genérica desde el panel admin (elige materia y categoría con selects)."""
     form = ResourceForm()
-    form.subject_id.choices = _subject_choices()
+    form.subject_id.choices = subject_choices()
     if form.validate_on_submit():
         category = Category.query.filter_by(
             subject_id=form.subject_id.data, slug=form.category.data
@@ -289,8 +281,6 @@ def delete_category(subject_id, category_id):
 @admin_bp.route('/recursos/<int:resource_id>/eliminar', methods=['POST'])
 @admin_required
 def delete_resource(resource_id):
-    if not current_user.is_admin:
-        abort(403)
     resource = Resource.query.get_or_404(resource_id)
     title = resource.title
     delete_uploaded_file(resource.file_path)
@@ -313,19 +303,8 @@ def list_contributions():
 @admin_bp.route('/contribuciones/<int:contribution_id>/aprobar', methods=['POST'])
 @admin_required
 def approve_contribution(contribution_id):
-    if not current_user.is_admin:
-        abort(403)
     c = Contribution.query.get_or_404(contribution_id)
-    resource = Resource(
-        title=c.title,
-        file_path=c.file_path,
-        subject_id=c.subject_id,
-        category_id=c.category_id,
-        uploaded_by_id=c.uploaded_by_id,
-    )
-    db.session.add(resource)
-    db.session.delete(c)
-    db.session.commit()
+    resource = publish_contribution(c)
     flash(f'"{resource.title}" aprobado y publicado.', 'success')
     return redirect(url_for('admin.list_contributions'))
 
@@ -333,13 +312,9 @@ def approve_contribution(contribution_id):
 @admin_bp.route('/contribuciones/<int:contribution_id>/rechazar', methods=['POST'])
 @admin_required
 def reject_contribution(contribution_id):
-    if not current_user.is_admin:
-        abort(403)
     c = Contribution.query.get_or_404(contribution_id)
     title = c.title
-    delete_uploaded_file(c.file_path)
-    db.session.delete(c)
-    db.session.commit()
+    discard_contribution(c)
     flash(f'Contribución "{title}" rechazada y eliminada.', 'info')
     return redirect(url_for('admin.list_contributions'))
 

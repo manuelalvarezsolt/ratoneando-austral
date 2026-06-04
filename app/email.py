@@ -18,6 +18,8 @@ def verify_token(token, max_age=86400):
     try:
         return _serializer().loads(token, salt='email-verification', max_age=max_age)
     except Exception:
+        # Token inválido o expirado: es un caso esperado, lo registramos a nivel info.
+        current_app.logger.info('Token de verificación inválido o expirado.')
         return None
 
 

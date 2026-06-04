@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from flask_login import UserMixin
-from sqlalchemy import event
+from sqlalchemy import event, func
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login_manager
 
@@ -21,9 +21,22 @@ class User(UserMixin, db.Model):
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
     uploaded_resources = db.relationship('Resource', backref='uploader', lazy='dynamic')
 
+    FREQUENT_THRESHOLD = 5
+
     @property
     def is_frequent_contributor(self):
-        return self.uploaded_resources.count() >= 5
+        """Conveniencia para casos sueltos. En listas (foro) usar
+        frequent_contributor_ids() para evitar un COUNT por usuario (N+1)."""
+        return self.uploaded_resources.count() >= self.FREQUENT_THRESHOLD
+
+    @staticmethod
+    def frequent_contributor_ids(threshold=FREQUENT_THRESHOLD):
+        """Set de user_ids con >= `threshold` recursos publicados, en UNA query."""
+        rows = (db.session.query(Resource.uploaded_by_id)
+                .group_by(Resource.uploaded_by_id)
+                .having(func.count(Resource.id) >= threshold)
+                .all())
+        return {uid for (uid,) in rows}
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

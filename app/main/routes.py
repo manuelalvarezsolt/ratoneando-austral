@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db, limiter
 from app.main import main_bp
 from app.main.forms import CommentForm, ContributionForm, ThreadForm, ReplyForm
-from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket, SiteConfig
+from app.models import Faculty, Career, Subject, CareerSubject, Category, Resource, Comment, Contribution, ForumThread, ForumReply, SupportTicket, SiteConfig, User
 from app.utils import slugify, save_uploaded_file
 from app.email import send_contribution_notification
 
@@ -171,7 +171,8 @@ def contribute(subject_slug, category_slug):
         try:
             send_contribution_notification(contribution)
         except Exception:
-            pass
+            current_app.logger.exception(
+                'No se pudo enviar la notificación de contribución id=%s', contribution.id)
         flash('¡Gracias por aportar a Ratoneando Austral! Tu archivo será revisado por un administrador.', 'success')
         if career:
             return redirect(url_for('main.subject_view',
@@ -194,7 +195,9 @@ def forum_index(faculty_slug):
                .filter_by(faculty_id=faculty.id)
                .order_by(ForumThread.created_at.desc())
                .all())
-    return render_template('main/forum.html', faculty=faculty, threads=threads)
+    frequent_ids = User.frequent_contributor_ids()
+    return render_template('main/forum.html', faculty=faculty, threads=threads,
+                           frequent_ids=frequent_ids)
 
 
 @main_bp.route('/facultad/<faculty_slug>/foro/nuevo', methods=['GET', 'POST'])
@@ -237,8 +240,10 @@ def view_thread(faculty_slug, thread_id):
         return redirect(url_for('main.view_thread',
                                 faculty_slug=faculty_slug, thread_id=thread_id))
     replies = thread.replies.order_by(ForumReply.created_at.asc()).all()
+    frequent_ids = User.frequent_contributor_ids()
     return render_template('main/thread.html',
-                           faculty=faculty, thread=thread, replies=replies, form=form)
+                           faculty=faculty, thread=thread, replies=replies, form=form,
+                           frequent_ids=frequent_ids)
 
 
 @main_bp.route('/facultad/<faculty_slug>/foro/<int:thread_id>/eliminar', methods=['POST'])

@@ -1,5 +1,6 @@
 import re
 import os
+import uuid
 from flask import current_app
 
 
@@ -30,7 +31,6 @@ def save_uploaded_file(file, subject_slug='', category_slug=''):
     Guarda el archivo y devuelve la ruta relativa a static/.
     Estructura en disco: uploads/<subject_slug>/<category_slug>/<uuid>.<ext>
     """
-    import uuid
     ext = file.filename.rsplit('.', 1)[-1].lower()
     safe_name = f'{uuid.uuid4().hex}.{ext}'
     parts = [p for p in (subject_slug, category_slug) if p]
@@ -49,5 +49,7 @@ def delete_uploaded_file(file_path):
     full = os.path.join(current_app.root_path, 'static', file_path)
     try:
         os.remove(full)
+    except FileNotFoundError:
+        pass  # ya no existe: nada que borrar
     except OSError:
-        pass
+        current_app.logger.warning('No se pudo borrar el archivo %s', full, exc_info=True)

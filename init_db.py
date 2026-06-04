@@ -714,34 +714,35 @@ def ensure_categories():
     return created
 
 
-def _migrate_schema(app):
-    """Añade columnas nuevas a tablas existentes (SQLite no soporta ALTER vía ORM)."""
-    from sqlalchemy import text
-    with app.app_context():
-        with db.engine.connect() as conn:
-            result = conn.execute(text("PRAGMA table_info(users)"))
-            columns = [row[1] for row in result]
-            if 'is_moderator' not in columns:
-                conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN is_moderator BOOLEAN NOT NULL DEFAULT 0"
-                ))
-                conn.commit()
-                print('Columna is_moderator añadida.')
-            if 'is_verified' not in columns:
-                # DEFAULT 1: usuarios existentes quedan verificados automáticamente
-                conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT 1"
-                ))
-                conn.commit()
-                print('Columna is_verified añadida (usuarios existentes marcados como verificados).')
+def _ensure_schema():
+    """
+    Lleva el esquema al día vía Alembic (flask db upgrade).
+    El esquema lo gestionan las migraciones en migrations/, NO db.create_all().
+
+    - Base nueva/vacía: aplica todas las migraciones y crea las tablas.
+    - Base ya versionada por Alembic: aplica solo las migraciones pendientes.
+    - Base preexistente SIN versionar (transición inicial): se detiene y pide
+      ejecutar `flask db stamp head` una vez, para no intentar recrear tablas.
+    """
+    from sqlalchemy import inspect
+    from flask_migrate import upgrade
+
+    tables = inspect(db.engine).get_table_names()
+    if tables and 'alembic_version' not in tables:
+        print('⚠ La base ya tiene tablas pero no está versionada por Alembic.')
+        print('  Ejecutá UNA sola vez para marcar el esquema actual como base:')
+        print('      flask --app run db stamp head')
+        print('  y volvé a correr este script.')
+        raise SystemExit(1)
+
+    upgrade()
+    print('Esquema al día (flask db upgrade).')
 
 
 def init():
     app = create_app()
-    _migrate_schema(app)
     with app.app_context():
-        db.create_all()  # crea tablas nuevas (site_config, etc.) sin tocar las existentes
-        print('Tablas creadas.')
+        _ensure_schema()
 
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@austral.edu.ar')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')

@@ -1,11 +1,12 @@
 from functools import wraps
-from flask import render_template, redirect, url_for, flash, abort, request
+from flask import render_template, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from app import db
 from app.moderator import moderator_bp
 from app.admin.forms import ResourceForm
 from app.models import Subject, Category, Resource, Contribution
-from app.utils import save_uploaded_file, delete_uploaded_file
+from app.utils import save_uploaded_file
+from app.services import publish_contribution, discard_contribution, subject_choices
 
 
 def moderator_required(f):
@@ -16,15 +17,6 @@ def moderator_required(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated
-
-
-def _subject_choices():
-    choices = []
-    for s in Subject.query.order_by(Subject.name).all():
-        careers = ', '.join(c.short for c in s.careers)
-        label = f'{s.name} ({careers})' if careers else s.name
-        choices.append((s.id, label))
-    return choices
 
 
 @moderator_bp.route('/')
@@ -38,16 +30,7 @@ def dashboard():
 @moderator_required
 def approve_contribution(contribution_id):
     c = Contribution.query.get_or_404(contribution_id)
-    resource = Resource(
-        title=c.title,
-        file_path=c.file_path,
-        subject_id=c.subject_id,
-        category_id=c.category_id,
-        uploaded_by_id=c.uploaded_by_id,
-    )
-    db.session.add(resource)
-    db.session.delete(c)
-    db.session.commit()
+    resource = publish_contribution(c)
     flash(f'"{resource.title}" aprobado y publicado.', 'success')
     return redirect(url_for('moderator.dashboard'))
 
@@ -57,9 +40,7 @@ def approve_contribution(contribution_id):
 def reject_contribution(contribution_id):
     c = Contribution.query.get_or_404(contribution_id)
     title = c.title
-    delete_uploaded_file(c.file_path)
-    db.session.delete(c)
-    db.session.commit()
+    discard_contribution(c)
     flash(f'Contribución "{title}" rechazada y eliminada.', 'info')
     return redirect(url_for('moderator.dashboard'))
 
@@ -68,7 +49,7 @@ def reject_contribution(contribution_id):
 @moderator_required
 def upload():
     form = ResourceForm()
-    form.subject_id.choices = _subject_choices()
+    form.subject_id.choices = subject_choices()
     if form.validate_on_submit():
         category = Category.query.filter_by(
             subject_id=form.subject_id.data, slug=form.category.data
