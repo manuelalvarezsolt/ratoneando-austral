@@ -42,10 +42,15 @@
       💬 Soporte
     </a>
 
-    <a class="navbar-brand" href="{{ url_for('main.index') }}" style="display:flex;align-items:center;gap:4px">
-      <img src="{{ url_for('static', filename='icons/logo-transparent.png') }}" alt="Logo" style="height:1.4em;width:auto;display:block;flex-shrink:0">
-      Ratoneando Austral
-      <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;margin-left:3px">v1.0 beta</span>
+    <a class="navbar-brand" href="{{ url_for('main.index') }}">
+      <span style="position:relative;white-space:nowrap">
+        <img src="{{ url_for('static', filename='icons/logo-transparent.png') }}" alt=""
+             style="position:absolute;right:100%;top:50%;transform:translateY(-50%);
+                    height:2.4em;width:auto;margin-right:-4px;
+                    filter:brightness(0) invert(1);opacity:.9">
+        Ratoneando Austral
+        <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;margin-left:3px">v1.0 beta</span>
+      </span>
     </a>
 
     {% if not current_user.is_authenticated %}

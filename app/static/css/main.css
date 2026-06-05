@@ -304,37 +304,35 @@ a:active .subject-card {
 
 /* ── Growth banner (index) ──────────────────────────────────── */
 .growth-banner {
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   background: rgba(26,74,122,0.18);
   border: 1px solid rgba(91,155,213,0.18);
   border-radius: 10px;
-  padding: 0.55rem 2.75rem 0.55rem 1.25rem;
+  padding: 0.55rem 1rem 0.55rem 1.25rem;
   margin-bottom: 2rem;
   font-size: 0.83rem;
   color: var(--text-sec);
-  text-align: center;
   line-height: 1.5;
 }
+.growth-banner > span:first-child { flex: 1; text-align: center; }
 .growth-banner strong { color: var(--text-main); }
 .growth-banner-close {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  outline: none;
-  box-shadow: none;
+  flex-shrink: 0;
   color: var(--text-sec);
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0;
-  opacity: 0.45;
-  transition: opacity 0.15s;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+  user-select: none;
+  background: rgba(26,74,122,0.35);
+  border-radius: 5px;
+  padding: 2px 6px;
 }
-.growth-banner-close:hover,
-.growth-banner-close:focus { opacity: 1; outline: none; box-shadow: none; }
+.growth-banner-close:hover { opacity: 1; background: rgba(26,74,122,0.55); }
 
 /* ── Navbar buttons: glow on hover ─────────────────────────── */
 .navbar .btn {
