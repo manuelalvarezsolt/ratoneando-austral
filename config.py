@@ -13,11 +13,16 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB
-    ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'}
+    # Importada desde app.constants para mantener una sola fuente de verdad.
+    from app.constants import UPLOAD_ALLOWED_EXTENSIONS
+    ALLOWED_EXTENSIONS = set(UPLOAD_ALLOWED_EXTENSIONS)
     AUSTRAL_DOMAINS = ('austral.edu.ar', 'mail.austral.edu.ar')
 
+    # Sesión base: permanente para que sobreviva al cierre del browser en la PWA,
+    # pero corta (12 h) para no dejar sesiones abiertas en PCs compartidas de facultad.
     SESSION_PERMANENT = True
-    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
+    # Remember-me cookie: solo se activa si el usuario marca "Recordarme".
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
 
     # Rate limiting (Flask-Limiter). 'memory://' sirve para 1 proceso;

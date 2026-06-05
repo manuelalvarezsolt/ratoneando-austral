@@ -3,6 +3,8 @@ from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, SelectField, TextAreaField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length
 
+from app.constants import UPLOAD_ALLOWED_EXTENSIONS
+
 
 class CommentForm(FlaskForm):
     content = TextAreaField('Comentario', validators=[DataRequired(), Length(min=2, max=2000)])
@@ -19,15 +21,13 @@ TIPO_CHOICES = [
     ('otros',        'Otro'),
 ]
 
-_ALLOWED_CONTRIB_EXT = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'xlsx']
-
 
 class ContributionForm(FlaskForm):
     title = StringField('Título', validators=[DataRequired(), Length(min=2, max=200)])
     tipo  = SelectField('Tipo', choices=TIPO_CHOICES)
     file  = FileField('Archivo', validators=[
         FileRequired(),
-        FileAllowed(_ALLOWED_CONTRIB_EXT, 'Formato no permitido.'),
+        FileAllowed(UPLOAD_ALLOWED_EXTENSIONS, 'Formato no permitido.'),
     ])
     submit = SubmitField('Enviar contribución')
 

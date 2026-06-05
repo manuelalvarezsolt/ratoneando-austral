@@ -1,5 +1,4 @@
 from urllib.parse import urlparse, urljoin
-from markupsafe import Markup
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, limiter
@@ -7,7 +6,6 @@ from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.models import User
 from app.utils import is_austral_email
-from app.email import send_verification_email, verify_token
 
 
 def _safe_next(target):
@@ -36,7 +34,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data.lower().strip()).first()
         if user and user.check_password(form.password.data):
-            login_user(user, remember=True)
+            login_user(user, remember=form.remember.data)
             next_page = _safe_next(request.args.get('next'))
             return redirect(next_page or url_for('main.index'))
         flash('Email o contraseña incorrectos.', 'danger')
@@ -65,43 +63,6 @@ def register():
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', form=form)
 
-
-@auth_bp.route('/verificar/<token>')
-def verify_email(token):
-    email = verify_token(token)
-    if email is None:
-        flash('El link de verificación es inválido o expiró. Pedí uno nuevo.', 'danger')
-        return redirect(url_for('auth.login'))
-    user = User.query.filter_by(email=email).first()
-    if user is None:
-        flash('No se encontró la cuenta.', 'danger')
-        return redirect(url_for('auth.login'))
-    if user.is_verified:
-        flash('Tu cuenta ya está verificada. Podés ingresar.', 'info')
-        return redirect(url_for('auth.login'))
-    user.is_verified = True
-    db.session.commit()
-    flash('¡Cuenta verificada! Ya podés ingresar.', 'success')
-    return redirect(url_for('auth.login'))
-
-
-@auth_bp.route('/reenviar-verificacion')
-@limiter.limit('3 per minute; 15 per hour')
-def resend_verification():
-    email = request.args.get('email', '').lower().strip()
-    if not email:
-        flash('Falta el email.', 'danger')
-        return redirect(url_for('auth.login'))
-    user = User.query.filter_by(email=email).first()
-    if user and not user.is_verified:
-        try:
-            send_verification_email(user)
-        except Exception:
-            flash('No se pudo enviar el email. Intentá de nuevo más tarde.', 'danger')
-            return redirect(url_for('auth.login'))
-    # Respuesta genérica para no exponer si el email existe
-    flash('Si el email está registrado y sin verificar, te enviamos un nuevo link.', 'info')
-    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/logout')

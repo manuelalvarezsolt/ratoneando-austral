@@ -346,7 +346,8 @@ def toggle_moderador(user_id):
     db.session.commit()
     action = 'asignado' if user.is_moderator else 'removido'
     flash(f'Rol de moderador {action} a {user.name}.', 'success')
-    return redirect(url_for('admin.list_users') + (f'?q={request.form.get("q", "")}' if request.form.get('q') else ''))
+    q = request.form.get('q', '').strip()
+    return redirect(url_for('admin.list_users', q=q) if q else url_for('admin.list_users'))
 
 
 # ── Soporte ───────────────────────────────────────────────────────────────────

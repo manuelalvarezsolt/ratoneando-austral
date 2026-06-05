@@ -4,15 +4,15 @@ from wtforms import StringField, SelectField, TextAreaField, SubmitField, URLFie
 from wtforms.validators import DataRequired, Length, Optional, URL
 
 from app.models import LEAF_CATEGORY_CHOICES
+from app.constants import UPLOAD_ALLOWED_EXTENSIONS
+
+_EXT_MSG = 'Formato no permitido. Formatos aceptados: ' + ', '.join(UPLOAD_ALLOWED_EXTENSIONS).upper()
 
 
 class SubjectForm(FlaskForm):
     name = StringField('Nombre de la materia', validators=[DataRequired(), Length(min=2, max=120)])
     description = TextAreaField('Descripción (opcional)', validators=[Optional(), Length(max=500)])
     submit = SubmitField('Guardar materia')
-
-
-_ALLOWED_ADMIN_EXT = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
 
 
 class UploadForm(FlaskForm):
@@ -23,7 +23,7 @@ class UploadForm(FlaskForm):
         'Archivo',
         validators=[
             DataRequired(message='Seleccioná un archivo.'),
-            FileAllowed(_ALLOWED_ADMIN_EXT, 'Formato no permitido. Usá PDF, DOC, DOCX, JPG o PNG.'),
+            FileAllowed(UPLOAD_ALLOWED_EXTENSIONS, _EXT_MSG),
         ],
     )
     submit = SubmitField('Subir')
@@ -39,7 +39,7 @@ class ResourceForm(FlaskForm):
         'Archivo',
         validators=[
             Optional(),
-            FileAllowed(_ALLOWED_ADMIN_EXT, 'Formato no permitido. Usá PDF, DOC, DOCX, JPG o PNG.'),
+            FileAllowed(UPLOAD_ALLOWED_EXTENSIONS, _EXT_MSG),
         ],
     )
     external_url = URLField('O pegá un link externo (Drive, etc.)', validators=[Optional(), URL()])
