@@ -1,4 +1,4 @@
-const CACHE = 'ratoneando-v1';
+const CACHE = 'ratoneando-v1.1';
 
 // Assets to precache on install
 const PRECACHE_URLS = [
@@ -35,17 +35,15 @@ self.addEventListener('fetch', e => {
   // Only handle GET
   if (req.method !== 'GET') return;
 
-  // Own static assets: cache-first, populate on miss
+  // Own static assets: network-first so deploys are picked up immediately;
+  // falls back to cache only when offline.
   if (url.origin === self.location.origin && url.pathname.startsWith('/static/')) {
     e.respondWith(
-      caches.match(req).then(hit => {
-        if (hit) return hit;
-        return fetch(req).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(req, copy));
-          return res;
-        });
-      })
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req))
     );
     return;
   }
