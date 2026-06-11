@@ -36,11 +36,20 @@
 <nav class="navbar navbar-expand-lg navbar-dark">
   <div class="container position-relative">
 
-    <a href="#" class="d-none d-lg-block me-3"
-       data-bs-toggle="modal" data-bs-target="#supportModal"
-       style="color:rgba(255,255,255,.3);font-size:.75rem;text-decoration:none;white-space:nowrap">
-      💬 Soporte
-    </a>
+    <div class="d-none d-lg-block me-3 position-relative" style="white-space:nowrap">
+      <a href="https://www.instagram.com/manualvarezsolt_?igsh=MXU0NnFjandzZmQzMw%3D%3D&utm_source=qr"
+         target="_blank" rel="noopener noreferrer"
+         title="Instagram"
+         style="position:absolute;right:calc(100% + 16px);top:50%;transform:translateY(-50%);
+                color:rgba(255,255,255,.3);font-size:1.4rem;text-decoration:none;line-height:1;transition:color .2s"
+         onmouseover="this.style.color='rgba(255,255,255,.65)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">
+        <i class="bi bi-instagram"></i>
+      </a>
+      <a href="#" data-bs-toggle="modal" data-bs-target="#supportModal"
+         style="color:rgba(255,255,255,.3);font-size:.75rem;text-decoration:none">
+        💬 Soporte
+      </a>
+    </div>
 
     <a class="navbar-brand" href="{{ url_for('main.index') }}">
       <span style="position:relative;white-space:nowrap">
@@ -49,12 +58,17 @@
                     height:2.4em;width:auto;margin-right:-4px;
                     filter:brightness(0) invert(1);opacity:.9">
         Ratoneando Austral
-        <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;margin-left:3px">v1.1 beta</span>
+        <span style="font-size:.58rem;opacity:.35;font-weight:400;letter-spacing:.04em;margin-left:3px">v1.2 beta</span>
       </span>
     </a>
 
+    <button class="nav-search-btn ms-auto" type="button" id="searchOpen"
+            aria-label="Buscar materia" title="Buscar materia">
+      <i class="bi bi-search"></i>
+    </button>
+
     {% if not current_user.is_authenticated %}
-    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm ms-auto me-2 d-lg-none">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm ms-1 me-1 d-lg-none">
       Ingresar
     </a>
     <button class="navbar-toggler border-0" type="button"
@@ -63,7 +77,7 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     {% else %}
-    <button class="navbar-toggler border-0 ms-auto" type="button"
+    <button class="navbar-toggler border-0 ms-1" type="button"
             data-bs-toggle="collapse" data-bs-target="#navMenu"
             aria-controls="navMenu" aria-expanded="false">
       <span class="navbar-toggler-icon"></span>
@@ -157,6 +171,90 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block scripts %}{% endblock %}
+
+<!-- Buscador: overlay de pantalla completa -->
+<div id="searchOverlay" class="search-overlay" hidden>
+  <div class="search-overlay-bar">
+    <div class="search-overlay-inner">
+      <i class="bi bi-search"></i>
+      <input type="search" id="searchInput" placeholder="Buscá una materia…"
+             autocomplete="off" aria-label="Buscar materia">
+      <button type="button" id="searchClose" class="search-close" aria-label="Cerrar búsqueda">
+        &times;
+      </button>
+    </div>
+  </div>
+  <div id="searchResults" class="search-results"></div>
+</div>
+
+<script>
+(function () {
+  var overlay = document.getElementById('searchOverlay');
+  var opener = document.getElementById('searchOpen');
+  if (!overlay || !opener) return;
+  var input = document.getElementById('searchInput');
+  var box = document.getElementById('searchResults');
+  var timer = null;
+
+  function openSearch() {
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    input.focus();
+  }
+  function closeSearch() {
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+    input.value = '';
+    box.innerHTML = '';
+  }
+
+  opener.addEventListener('click', openSearch);
+  document.getElementById('searchClose').addEventListener('click', closeSearch);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !overlay.hidden) closeSearch();
+  });
+
+  function render(results, q) {
+    box.innerHTML = '';
+    if (!results.length) {
+      var empty = document.createElement('div');
+      empty.className = 'search-empty';
+      empty.textContent = 'Sin resultados para “' + q + '”';
+      box.appendChild(empty);
+      return;
+    }
+    results.forEach(function (r) {
+      var a = document.createElement('a');
+      a.className = 'search-result';
+      a.href = r.url;
+      var name = document.createElement('span');
+      name.className = 'search-result-name';
+      name.textContent = r.subject;
+      var where = document.createElement('span');
+      where.className = 'search-result-where';
+      where.textContent = r.where;
+      a.appendChild(name);
+      a.appendChild(where);
+      box.appendChild(a);
+    });
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = input.value.trim();
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    timer = setTimeout(function () {
+      fetch('/buscar?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (input.value.trim() !== q) return;  // llegó tarde: ya se escribió otra cosa
+          render(d.results || [], q);
+        })
+        .catch(function () {});
+    }, 250);
+  });
+}());
+</script>
 
 <!-- Modal Soporte -->
 <div class="modal fade" id="supportModal" tabindex="-1" aria-labelledby="supportModalLabel" aria-hidden="true">

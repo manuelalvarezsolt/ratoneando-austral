@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 from flask import render_template, redirect, url_for, flash, abort, request, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from app import db, limiter
@@ -18,6 +19,68 @@ def index():
     faculties = Faculty.query.order_by(Faculty.order).all()
     announcement = SiteConfig.get('announcement')
     return render_template('main/index.html', faculties=faculties, announcement=announcement)
+
+
+def _faculty_short(name):
+    """'Facultad de Ciencias Empresariales' -> 'Empresariales'."""
+    for prefix in ('Facultad de Ciencias ', 'Facultad de ', 'Escuela de '):
+        if name.startswith(prefix):
+            return name[len(prefix):]
+    return name
+
+
+@main_bp.route('/buscar')
+def search_subjects():
+    """
+    Búsqueda de materias para el buscador del navbar. Devuelve JSON.
+    Insensible a mayúsculas y tildes: se slugifica la query y se compara
+    contra Subject.slug (ya normalizado). Cada token debe aparecer en el slug.
+    Una materia compartida por varias carreras de la misma facultad devuelve
+    UNA sola entrada ("Álgebra I — Ingeniería"), linkeada a la primera carrera.
+    """
+    q = request.args.get('q', '').strip()
+    tokens = [t for t in slugify(q).split('-') if t]
+    if len(q) < 2 or not tokens:
+        return jsonify(results=[])
+
+    query = Subject.query
+    for token in tokens:
+        query = query.filter(Subject.slug.contains(token))
+    subjects = query.order_by(Subject.name).limit(20).all()
+    # Las materias cuyo nombre empieza con lo buscado van primero
+    # (p. ej. "algebra" muestra "Álgebra I" antes que "Introducción a Álgebra...").
+    subjects.sort(key=lambda s: not s.slug.startswith(tokens[0]))
+
+    results = []
+    for subject in subjects:
+        if len(results) >= 12:
+            break
+        seen = set()  # facultades ya listadas para esta materia
+        for link in subject.career_links.order_by(CareerSubject.id).all():
+            career = link.career
+            faculty = career.faculty
+            key = ('f', faculty.id) if faculty else ('c', career.id)
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append({
+                'subject': subject.name,
+                'where': _faculty_short(faculty.name) if faculty else career.name,
+                'career': career.name,
+                'url': url_for('main.subject_view',
+                               career_slug=career.slug,
+                               subject_slug=subject.slug),
+            })
+
+    # Materias distintas con el mismo nombre en la misma facultad (p. ej. dos
+    # "Física General" en Ingeniería): se desambiguan con la carrera.
+    dupes = Counter((r['subject'], r['where']) for r in results)
+    for r in results:
+        if dupes[(r['subject'], r['where'])] > 1:
+            r['where'] = r['career']
+        del r['career']
+
+    return jsonify(results=results[:12])
 
 
 @main_bp.route('/facultad/<faculty_slug>')

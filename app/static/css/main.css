@@ -375,4 +375,116 @@ a:active .subject-card {
 
   /* Subject cards en carrera: fila completa en teléfono */
   .subject-card .card-body { padding: 0.75rem !important; }
+
+  /* Navbar compacta: que brand + lupa + Ingresar + hamburguesa entren en una línea */
+  .navbar-brand { font-size: 0.95rem; }
+  .nav-search-btn { padding: 0.25rem 0.3rem; }
+  .navbar-toggler { padding: 0.25rem 0.4rem; }
+}
+
+/* ── Buscador de materias ───────────────────────────────────── */
+.nav-search-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 1.1rem;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.nav-search-btn:hover { color: var(--text-main); }
+
+/* Overlay de pantalla completa: input arriba, resultados abajo */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background-color: var(--bg-main);
+  overflow-y: auto;
+}
+
+.search-overlay-bar {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+}
+
+.search-overlay-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+}
+.search-overlay-inner .bi-search {
+  color: var(--text-sec);
+  font-size: 1.1rem;
+}
+
+.search-overlay input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+.search-overlay input::placeholder { color: var(--text-sec); }
+.search-overlay input::-webkit-search-cancel-button { display: none; }
+
+.search-close {
+  background: none;
+  border: none;
+  color: var(--text-sec);
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  transition: color 0.15s ease;
+}
+.search-close:hover { color: var(--text-main); }
+
+.search-results {
+  max-width: 620px;
+  margin: 1.25rem auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+/* Cada resultado es un botón: card oscura, borde, redondeada */
+.search-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.search-result:hover {
+  background-color: rgba(26, 74, 122, 0.35);
+  border-color: var(--accent-hov);
+  color: var(--text-main);
+  transform: translateY(-1px);
+}
+.search-result-name { font-weight: 600; font-size: 0.95rem; }
+.search-result-where {
+  color: var(--text-sec);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.search-empty {
+  color: var(--text-sec);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1.5rem 0;
 }
