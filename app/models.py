@@ -308,6 +308,9 @@ class Resource(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Texto extraído del PDF para el índice de búsqueda (RAG / FTS5).
+    # NULL = todavía no procesado; '' = procesado pero sin texto (escaneado/falló).
+    extracted_text = db.Column(db.Text)
 
     category = db.relationship('Category', back_populates='resources')
     comments = db.relationship('Comment', backref='resource', lazy='dynamic', cascade='all, delete-orphan')

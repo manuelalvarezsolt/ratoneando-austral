@@ -36,3 +36,9 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
     ADMIN_NOTIFY_EMAIL = os.environ.get('ADMIN_NOTIFY_EMAIL', 'manuelalvarezsolt@gmail.com')
+
+    # --- Agente IA (RAG sobre los PDFs) -----------------------------------
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash-lite')
+    # Cuántos recursos recupera FTS5 para armar el contexto del agente.
+    RAG_TOP_K = int(os.environ.get('RAG_TOP_K', 5))

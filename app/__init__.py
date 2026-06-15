@@ -40,11 +40,15 @@ def create_app():
     from app.main import main_bp
     from app.admin import admin_bp
     from app.moderator import moderator_bp
+    from app.api import api_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(moderator_bp, url_prefix='/moderador')
+    app.register_blueprint(api_bp, url_prefix='/api')
+    # La API es JSON (auth por sesión + 401 explícito): se exime de CSRF.
+    csrf.exempt(api_bp)
 
     @app.route('/sw.js')
     def service_worker():

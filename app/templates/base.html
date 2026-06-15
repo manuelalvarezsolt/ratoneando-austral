@@ -314,6 +314,162 @@
 }());
 </script>
 
+{% if current_user.is_authenticated %}
+<!-- Asistente IA (agente RAG sobre los apuntes) -->
+<button class="agent-fab" id="agentFab" type="button"
+        aria-label="Asistente IA" title="Preguntale a la IA">
+  <i class="bi bi-stars"></i>
+</button>
+
+<div class="agent-panel" id="agentPanel" hidden>
+  <div class="agent-header">
+    <i class="bi bi-stars"></i>
+    <div>
+      <div class="agent-title">Asistente IA</div>
+      <div class="agent-sub">Busca en los apuntes del repositorio</div>
+    </div>
+    <button type="button" class="agent-close" id="agentClose" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="agent-body" id="agentBody">
+    <div class="agent-intro">
+      Preguntá sobre cualquier tema y te busco material relevante en Ratoneando.<br>
+      <span style="opacity:.7">Ej.: «¿Qué entra en el parcial de Álgebra I?»</span>
+    </div>
+  </div>
+  <div class="agent-footer">
+    <div class="agent-input-row">
+      <textarea id="agentInput" rows="1" placeholder="Escribí tu pregunta…"
+                autocomplete="off"></textarea>
+      <button type="button" class="agent-send" id="agentSend" aria-label="Enviar">
+        <i class="bi bi-send"></i>
+      </button>
+    </div>
+    <div class="agent-disclaimer">La IA puede equivocarse. Verificá con el material citado.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var fab    = document.getElementById('agentFab');
+  var panel  = document.getElementById('agentPanel');
+  if (!fab || !panel) return;
+  var body   = document.getElementById('agentBody');
+  var input  = document.getElementById('agentInput');
+  var send   = document.getElementById('agentSend');
+  var busy   = false;
+
+  function openPanel() {
+    panel.hidden = false;
+    fab.style.display = 'none';
+    setTimeout(function () { input.focus(); }, 50);
+  }
+  function closePanel() {
+    panel.hidden = true;
+    fab.style.display = 'flex';
+  }
+  fab.addEventListener('click', openPanel);
+  document.getElementById('agentClose').addEventListener('click', closePanel);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) closePanel();
+  });
+
+  // Autosize del textarea
+  input.addEventListener('input', function () {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  function scrollDown() { body.scrollTop = body.scrollHeight; }
+
+  function addMessage(text, who) {
+    var el = document.createElement('div');
+    el.className = 'agent-msg agent-msg-' + who;
+    el.textContent = text;
+    body.appendChild(el);
+    scrollDown();
+    return el;
+  }
+
+  function addTyping() {
+    var el = document.createElement('div');
+    el.className = 'agent-msg agent-msg-bot';
+    el.innerHTML = '<span class="agent-typing"><span></span><span></span><span></span></span>';
+    body.appendChild(el);
+    scrollDown();
+    return el;
+  }
+
+  function renderAnswer(el, data) {
+    el.textContent = data.respuesta || '';
+    if (data.fuentes && data.fuentes.length) {
+      var wrap = document.createElement('div');
+      wrap.className = 'agent-sources';
+      data.fuentes.forEach(function (f) {
+        var a = document.createElement('a');
+        a.className = 'agent-source';
+        a.href = f.url;
+        var t = document.createElement('div');
+        t.textContent = f.title;
+        var m = document.createElement('div');
+        m.className = 'agent-source-meta';
+        m.textContent = (f.subject || '') + (f.category ? ' · ' + f.category : '');
+        a.appendChild(t);
+        a.appendChild(m);
+        wrap.appendChild(a);
+      });
+      el.appendChild(wrap);
+    }
+    scrollDown();
+  }
+
+  function ask() {
+    var q = input.value.trim();
+    if (!q || busy) return;
+    busy = true;
+    send.disabled = true;
+    addMessage(q, 'user');
+    input.value = '';
+    input.style.height = 'auto';
+    var typing = addTyping();
+
+    fetch('/api/agente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pregunta: q })
+    })
+      .then(function (r) {
+        if (r.status === 429) throw new Error('Demasiadas preguntas seguidas. Esperá un momento.');
+        return r.json();
+      })
+      .then(function (d) {
+        if (d && d.ok) {
+          renderAnswer(typing, d);
+        } else {
+          typing.textContent = (d && d.error) || 'No pude responder. Probá de nuevo.';
+        }
+      })
+      .catch(function (err) {
+        typing.textContent = err.message || 'Error de conexión. Probá de nuevo.';
+      })
+      .finally(function () {
+        busy = false;
+        send.disabled = false;
+        input.focus();
+      });
+  }
+
+  send.addEventListener('click', ask);
+  input.addEventListener('keydown', function (e) {
+    // Enter envía; Shift+Enter hace salto de línea
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      ask();
+    }
+  });
+}());
+</script>
+{% endif %}
+
 <!-- Banner de instalación iOS -->
 <div id="ra-ios-banner"
      style="display:none;position:fixed;bottom:0;left:0;right:0;

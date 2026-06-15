@@ -15,3 +15,6 @@ instance/
 
 # Archivos subidos por usuarios
 app/static/uploads/
+
+# Logs del script de extracción masiva
+*.log

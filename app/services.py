@@ -1,4 +1,5 @@
 """Lógica de dominio compartida entre blueprints (admin y moderador)."""
+from flask import current_app
 from app import db
 from app.models import Resource, Subject
 from app.utils import delete_uploaded_file
@@ -19,6 +20,21 @@ def publish_contribution(contribution):
     db.session.add(resource)
     db.session.delete(contribution)
     db.session.commit()
+
+    # Hook RAG: indexar el texto del PDF recién publicado. Va en su propio
+    # try/except y commit aparte para que un fallo de extracción NUNCA
+    # invalide la aprobación (el recurso ya quedó commiteado arriba).
+    try:
+        from app.rag import index_resource
+        index_resource(resource)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning(
+            'No se pudo indexar el texto del recurso %s', resource.id,
+            exc_info=True,
+        )
+
     return resource
 
 
