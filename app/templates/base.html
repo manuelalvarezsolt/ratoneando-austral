@@ -357,6 +357,7 @@
   var input  = document.getElementById('agentInput');
   var send   = document.getElementById('agentSend');
   var busy   = false;
+  var chatHistory = [];   // turnos previos {role, content} para dar contexto a la IA
 
   function openPanel() {
     panel.hidden = false;
@@ -435,7 +436,8 @@
     fetch('/api/agente', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pregunta: q })
+      // Mandamos los turnos previos (sin la pregunta actual: el server la agrega).
+      body: JSON.stringify({ pregunta: q, historial: chatHistory })
     })
       .then(function (r) {
         if (r.status === 429) throw new Error('Demasiadas preguntas seguidas. Esperá un momento.');
@@ -444,6 +446,10 @@
       .then(function (d) {
         if (d && d.ok) {
           renderAnswer(typing, d);
+          // Acumulamos el intercambio para el próximo turno (tope: 20 mensajes).
+          chatHistory.push({ role: 'user', content: q });
+          chatHistory.push({ role: 'assistant', content: d.respuesta || '' });
+          if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
         } else {
           typing.textContent = (d && d.error) || 'No pude responder. Probá de nuevo.';
         }

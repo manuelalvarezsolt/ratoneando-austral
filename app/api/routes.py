@@ -56,13 +56,20 @@ def buscar():
 @limiter.limit('10 per minute; 100 per day')
 def agente():
     """Pregunta al agente. Acepta:
-        POST {"pregunta": "..."}  ó  GET ?q=...
-    Devuelve {ok, pregunta, respuesta, fuentes, used_ai}.
+        POST {"pregunta": "...", "historial": [{"role": "...", "content": "..."}]}
+        GET  ?q=...
+    El `historial` (opcional, mensajes previos de la conversación) se manda a
+    Gemini para mantener contexto. Devuelve {ok, pregunta, respuesta, fuentes,
+    used_ai}.
     """
+    historial = None
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
         pregunta = (data.get('pregunta') or data.get('q')
                     or request.form.get('pregunta') or '')
+        raw_hist = data.get('historial') or data.get('history')
+        if isinstance(raw_hist, list):
+            historial = raw_hist
     else:
         pregunta = request.args.get('q') or request.args.get('pregunta') or ''
     pregunta = pregunta.strip()
@@ -70,7 +77,7 @@ def agente():
     if len(pregunta) < 3:
         return jsonify(ok=False, error='Escribí una pregunta más completa.'), 400
 
-    result = answer_question(pregunta)
+    result = answer_question(pregunta, history=historial)
     fuentes = [
         {**s, 'url': url_for('main.resource_view', resource_id=s['id'])}
         for s in result['sources']

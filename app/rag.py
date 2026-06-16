@@ -287,17 +287,23 @@ def _build_context(results):
     return '\n\n---\n\n'.join(blocks)
 
 
-def call_gemini(prompt, timeout=30):
-    """Llama a Gemini generateContent (REST). Devuelve el texto de la
-    respuesta. Lanza RuntimeError si no hay API key o si la API falla."""
+def call_gemini(contents, timeout=30):
+    """Llama a Gemini generateContent (REST). `contents` puede ser un string
+    (un único turno de usuario) o una lista de turnos al estilo Gemini
+    [{'role': 'user'|'model', 'parts': [{'text': ...}]}, ...] para conversación
+    multi-turn. Devuelve el texto de la respuesta. Lanza RuntimeError si no hay
+    API key o si la API falla."""
     api_key = current_app.config.get('GEMINI_API_KEY')
     if not api_key:
         raise RuntimeError('GEMINI_API_KEY no configurada en el entorno.')
 
+    if isinstance(contents, str):
+        contents = [{'role': 'user', 'parts': [{'text': contents}]}]
+
     model = current_app.config.get('GEMINI_MODEL', 'gemini-2.5-flash-lite')
     url = GEMINI_URL.format(model=model)
     payload = {
-        'contents': [{'parts': [{'text': prompt}]}],
+        'contents': contents,
         'generationConfig': {
             'temperature': 0.2,
             'maxOutputTokens': 1024,
@@ -323,15 +329,20 @@ PROMPT_TEMPLATE = """\
 Sos el asistente de Ratoneando, un repositorio de material de estudio de la \
 Universidad Austral. Tu única fuente de verdad es el MATERIAL listado abajo.
 
-Reglas estrictas:
-1. Basá tu respuesta en el MATERIAL provisto. No agregues datos de tu \
-conocimiento propio ni inventes nada que no esté ahí.
-2. Si entre el MATERIAL hay recursos relacionados con la pregunta, USALOS para \
-dar una respuesta útil, aunque cubran el tema solo en parte; en ese caso podés \
-aclarar qué quedó afuera. Respondé "No tengo ese material en el repositorio." \
-ÚNICAMENTE cuando ninguno de los recursos tenga relación con lo que se pregunta.
-3. NUNCA inventes datos, definiciones, fechas ni cifras, y NUNCA sugieras sitios \
-web, libros, links ni fuentes externas al repositorio.
+Reglas:
+1. Para preguntas sobre contenido concreto (definiciones, qué entra en un \
+parcial, fórmulas, fechas, datos puntuales): basate EXCLUSIVAMENTE en el \
+MATERIAL y no inventes nada que no esté ahí. Si hay recursos relacionados, \
+usalos aunque cubran el tema sólo en parte (podés aclarar qué quedó afuera); si \
+NINGUNO tiene relación, respondé "No tengo ese material en el repositorio."
+2. Para preguntas subjetivas o que piden criterio (p. ej. "cuál es el tema más \
+importante", "qué conviene estudiar", "cómo me preparo"): combiná lo que haya en \
+el MATERIAL con tu conocimiento general de la materia para dar una orientación \
+útil y razonada. Dejá en claro qué es sugerencia general tuya y qué sale del \
+material del repositorio.
+3. Nunca inventes datos concretos del repositorio (fechas, cifras, ni qué \
+contiene un recurso puntual) ni sugieras sitios web, libros, links ni fuentes \
+externas al repositorio.
 4. Sé conciso y directo: andá al grano, sin rodeos ni relleno.
 
 Estilo de la respuesta:
@@ -354,8 +365,42 @@ Pregunta del alumno: {question}
 Respuesta:"""
 
 
-def answer_question(question, top_k=None):
+# Límites del historial de conversación que mandamos a Gemini (control de
+# tokens/costo): cuántos mensajes previos y cuánto texto por mensaje.
+HISTORY_MAX_TURNS = 10
+HISTORY_MAX_CHARS = 4_000
+
+
+def _history_to_contents(history):
+    """Convierte un historial del front en turnos al estilo Gemini.
+    Acepta items {'role': ..., 'content'/'text': ...}. Mapea cualquier rol de
+    asistente a 'model' y el resto a 'user'. Ignora vacíos, recorta longitud y
+    cantidad, y descarta turnos 'model' iniciales (Gemini espera que la
+    conversación arranque con 'user')."""
+    contents = []
+    if not history:
+        return contents
+    for msg in list(history)[-HISTORY_MAX_TURNS:]:
+        if not isinstance(msg, dict):
+            continue
+        text = (msg.get('content') or msg.get('text') or '').strip()
+        if not text:
+            continue
+        role = str(msg.get('role') or '').lower()
+        g_role = 'model' if role in ('assistant', 'model', 'bot', 'ia', 'ai') else 'user'
+        contents.append({'role': g_role, 'parts': [{'text': text[:HISTORY_MAX_CHARS]}]})
+    while contents and contents[0]['role'] == 'model':
+        contents.pop(0)
+    return contents
+
+
+def answer_question(question, history=None, top_k=None):
     """Pipeline RAG completo: busca con FTS5, arma contexto y consulta Gemini.
+
+    `history` (opcional) es el historial de la conversación previa
+    [{'role': 'user'|'assistant', 'content': ...}, ...]; se manda a Gemini como
+    turnos anteriores para que mantenga contexto. La pregunta actual va siempre
+    como último turno, fundamentada en el MATERIAL recuperado para ESA pregunta.
 
     Devuelve dict:
         {answer, sources: [{id, title, subject, category}], used_ai: bool}
@@ -382,9 +427,12 @@ def answer_question(question, top_k=None):
     prompt = PROMPT_TEMPLATE.format(
         context=_build_context(results), question=question.strip(),
     )
+    # Conversación = turnos previos + la pregunta actual fundamentada.
+    contents = _history_to_contents(history)
+    contents.append({'role': 'user', 'parts': [{'text': prompt}]})
 
     try:
-        answer = call_gemini(prompt)
+        answer = call_gemini(contents)
         used_ai = True
     except Exception as exc:
         logger.warning('Agente: fallback sin IA (%s)', exc)
