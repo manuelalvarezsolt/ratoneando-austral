@@ -401,6 +401,77 @@ def _history_to_contents(history):
     return contents
 
 
+# --- Clasificación rápida: ¿hace falta buscar material? --------------------- #
+# Palabras de saludo/cortesía que, solas, no ameritan tocar los PDFs.
+_GREETING_WORDS = {
+    'hola', 'holis', 'buenas', 'buenos', 'buen', 'dia', 'dias', 'tarde',
+    'tardes', 'noche', 'noches', 'hey', 'ey', 'hello', 'hi', 'que', 'tal',
+    'como', 'andas', 'va', 'saludos', 'ola',
+}
+_COURTESY_WORDS = {
+    'gracias', 'muchas', 'mil', 'genial', 'perfecto', 'dale', 'ok', 'oka',
+    'okay', 'listo', 'joya', 'barbaro', 'buenisimo', 'copado', 'chau',
+    'adios', 'nada', 'todo', 'bien',
+}
+# Frases sobre el propio agente (meta): responde sin buscar.
+_META_SUBSTRINGS = (
+    'quien-sos', 'que-sos', 'sos-un-bot', 'sos-una-ia', 'sos-humano',
+    'que-podes-hacer', 'que-haces', 'que-sabes-hacer', 'para-que-servis',
+    'como-funcionas', 'como-te-uso', 'que-es-esto', 'quien-te-hizo',
+    'como-te-llamas', 'que-es-ratoneando',
+)
+
+
+def _needs_search(question):
+    """Decide si la pregunta amerita buscar material en el repositorio.
+
+    SESGADO A BUSCAR: sólo devuelve False (responder sin PDFs) cuando la
+    pregunta es claramente conversacional o meta (saludo, agradecimiento,
+    pregunta sobre el agente). Si tras descartar saludos/cortesía/stopwords
+    queda CUALQUIER token de contenido, busca. Así una pregunta subjetiva pero
+    académica ("cuál es el tema más importante de Análisis") cae en la rama de
+    búsqueda y conserva el razonamiento con criterio (regla 2 del prompt)."""
+    norm = slugify(question)
+    tokens = [t for t in norm.split('-') if t]
+    if not tokens:
+        return False
+    if any(sub in norm for sub in _META_SUBSTRINGS):
+        return False
+    skip = _GREETING_WORDS | _COURTESY_WORDS | _STOPWORDS
+    content = [t for t in tokens if t not in skip]
+    return len(content) > 0
+
+
+CONV_PROMPT = """\
+Sos el asistente de Ratoneando, un repositorio de material de estudio de la \
+Universidad Austral. El usuario te escribió algo conversacional o general (un \
+saludo, un agradecimiento o una pregunta sobre vos). Respondé breve y natural, \
+en español rioplatense, sin markdown ni listas. Si viene al caso, recordale en \
+una línea que podés buscarle material y resolver dudas de sus materias \
+(parciales, finales, resúmenes, apuntes). En este modo no inventes datos \
+académicos ni menciones materiales puntuales.
+
+Mensaje del usuario: {question}
+
+Respuesta:"""
+
+
+def _answer_conversational(question, history):
+    """Responde preguntas conversacionales/genéricas con Gemini, sin buscar."""
+    contents = _history_to_contents(history)
+    contents.append({'role': 'user',
+                     'parts': [{'text': CONV_PROMPT.format(question=question.strip())}]})
+    try:
+        answer = call_gemini(contents)
+        used_ai = True
+    except Exception as exc:
+        logger.warning('Agente: fallback conversacional (%s)', exc)
+        answer = ('¡Hola! Puedo ayudarte a buscar material y resolver dudas de '
+                  'tus materias. ¿Qué necesitás?')
+        used_ai = False
+    return {'answer': answer, 'sources': [], 'used_ai': used_ai}
+
+
 def answer_question(question, history=None, top_k=None):
     """Pipeline RAG completo: busca con FTS5, arma contexto y consulta Gemini.
 
@@ -414,6 +485,11 @@ def answer_question(question, history=None, top_k=None):
     Nunca lanza por culpa de Gemini: ante un fallo de la API devuelve una
     respuesta degradada con las fuentes encontradas.
     """
+    # Preguntas conversacionales/genéricas: Gemini responde directo, sin buscar.
+    # (Las subjetivas-académicas NO entran acá: ver _needs_search.)
+    if not _needs_search(question):
+        return _answer_conversational(question, history)
+
     top_k = top_k or current_app.config.get('RAG_TOP_K', 5)
     results = search_resources(question, limit=top_k)
 
@@ -443,9 +519,9 @@ def answer_question(question, history=None, top_k=None):
         used_ai = True
     except Exception as exc:
         logger.warning('Agente: fallback sin IA (%s)', exc)
-        titles = ', '.join('“{}”'.format(s['title']) for s in sources)
-        answer = ('No pude generar una respuesta con IA en este momento, pero '
-                  'encontré material que puede servirte: {}.'.format(titles))
+        # El front muestra las fuentes como tarjetas: no las listamos en texto.
+        answer = ('No pude generar una respuesta en este momento. '
+                  'Estos materiales pueden ayudarte:')
         used_ai = False
 
     return {'answer': answer, 'sources': sources, 'used_ai': used_ai}
