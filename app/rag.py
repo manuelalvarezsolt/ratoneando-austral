@@ -17,6 +17,7 @@ from flask import current_app
 from sqlalchemy import text
 
 from app import db
+from app.utils import slugify
 
 logger = logging.getLogger(__name__)
 
@@ -111,33 +112,54 @@ _STOPWORDS = {
 }
 
 
-def _fts_query(q):
-    """Convierte texto libre del usuario en una expresión MATCH segura.
+# Palabras que mapean a una categoría de la DB. Si la query las menciona,
+# restringimos la búsqueda a esos slugs (no son términos de contenido).
+# "examen" abarca las tres hojas de Exámenes.
+CATEGORY_KEYWORDS = {
+    'parcial': {'parciales'}, 'parciales': {'parciales'},
+    'final': {'finales'}, 'finales': {'finales'},
+    'integrador': {'integradores'}, 'integradores': {'integradores'},
+    'examen': {'parciales', 'finales', 'integradores'},
+    'examenes': {'parciales', 'finales', 'integradores'},
+    'resumen': {'resumenes'}, 'resumenes': {'resumenes'},
+    'apunte': {'apuntes'}, 'apuntes': {'apuntes'},
+    'guia': {'guias'}, 'guias': {'guias'},
+}
 
-    Tokeniza, descarta tokens cortos y stopwords, escapa comillas y une con OR
-    (prioriza recall; el ranking bm25 ordena por relevancia). Si tras quitar
-    stopwords no queda nada, las conserva (mejor algo que nada). Devuelve None
-    si no hay tokens útiles -> el caller devuelve vacío sin tocar la DB.
-    """
-    tokens = [t for t in re.findall(r'\w+', q.lower(), flags=re.UNICODE)
-              if len(t) >= 2]
-    if not tokens:
+# Tokens de 1 char que igual conservamos (numerales romanos: Análisis I vs II).
+_KEEP_SHORT = {'i', 'v', 'x'}
+
+
+def _query_tokens(query):
+    """Tokens normalizados (minúscula, sin tildes) del texto del usuario.
+    Reusa slugify para que 'Análisis I' y 'analisis i' den lo mismo."""
+    return [t for t in slugify(query).split('-') if t]
+
+
+def _fts_match(tokens):
+    """Expresión MATCH de FTS5 a partir de tokens ya normalizados.
+    Descarta stopwords y tokens de 1 char (salvo numerales romanos) y une con
+    OR (prioriza recall; bm25 ordena). Devuelve None si no queda nada útil."""
+    toks = [t for t in tokens
+            if t not in _STOPWORDS and (len(t) >= 2 or t in _KEEP_SHORT)]
+    toks = toks or [t for t in tokens if len(t) >= 2] or tokens
+    if not toks:
         return None
-    content = [t for t in tokens if t not in _STOPWORDS]
-    tokens = content or tokens
     # Comillas dobles -> literal en FTS5; duplicarlas las escapa.
-    return ' OR '.join('"{}"'.format(t.replace('"', '""')) for t in tokens)
+    return ' OR '.join('"{}"'.format(t.replace('"', '""')) for t in toks)
 
 
-def search_resources(query, limit=10):
-    """Busca recursos relevantes con FTS5. Devuelve lista de dicts ordenada
-    por relevancia (mejor primero). Cada item:
-        {id, title, description, subject, category, snippet, score}
-    """
-    match = _fts_query(query)
-    if not match:
-        return []
-
+def _fts_search(match, cat_slugs, limit):
+    """Búsqueda full-text sobre título/descripción/texto del recurso, con
+    filtro opcional por categoría. Ordena por relevancia bm25."""
+    params = {'match': match, 'limit': limit}
+    cat_clause = ''
+    if cat_slugs:
+        keys = []
+        for i, slug in enumerate(sorted(cat_slugs)):
+            params['c%d' % i] = slug
+            keys.append(':c%d' % i)
+        cat_clause = ' AND c.slug IN (%s)' % ', '.join(keys)
     sql = text("""
         SELECT
             r.id            AS id,
@@ -151,12 +173,86 @@ def search_resources(query, limit=10):
         JOIN resources  r ON r.id = resources_fts.rowid
         JOIN subjects   s ON s.id = r.subject_id
         JOIN categories c ON c.id = r.category_id
-        WHERE resources_fts MATCH :match
+        WHERE resources_fts MATCH :match""" + cat_clause + """
         ORDER BY score
         LIMIT :limit
     """)
-    rows = db.session.execute(sql, {'match': match, 'limit': limit}).mappings().all()
-    return [dict(row) for row in rows]
+    return [dict(row) for row in db.session.execute(sql, params).mappings().all()]
+
+
+def _subject_search(content_tokens, cat_slugs, limit, exclude_ids):
+    """Recall por MATERIA: recursos de las materias cuyo slug contiene TODOS los
+    tokens de contenido (p. ej. 'analisis i' -> materia 'Análisis Matemático I').
+    Cubre el caso en que el usuario nombra la materia pero el título del recurso
+    no incluye ese término (el FTS solo indexa el texto del recurso, no la
+    materia). Respeta el filtro de categoría y excluye los ya traídos."""
+    subj_tokens = [t for t in content_tokens
+                   if t not in _STOPWORDS and (len(t) >= 2 or t in _KEEP_SHORT)]
+    if not subj_tokens or limit <= 0:
+        return []
+
+    from app.models import Subject, Category, Resource
+
+    sq = Subject.query
+    for t in subj_tokens:
+        sq = sq.filter(Subject.slug.contains(t))
+    subject_ids = [sid for (sid,) in sq.with_entities(Subject.id).limit(8).all()]
+    if not subject_ids:
+        return []
+
+    rq = (db.session.query(Resource.id, Resource.title, Resource.description,
+                           Subject.name, Category.name)
+          .join(Subject, Subject.id == Resource.subject_id)
+          .join(Category, Category.id == Resource.category_id)
+          .filter(Resource.subject_id.in_(subject_ids)))
+    if cat_slugs:
+        rq = rq.filter(Category.slug.in_(cat_slugs))
+    if exclude_ids:
+        rq = rq.filter(~Resource.id.in_(exclude_ids))
+    rq = rq.order_by(Resource.created_at.desc()).limit(limit)
+
+    return [{'id': rid, 'title': title, 'description': desc,
+             'subject': subj, 'category': cat, 'snippet': '', 'score': None}
+            for (rid, title, desc, subj, cat) in rq.all()]
+
+
+def search_resources(query, limit=10):
+    """Busca recursos relevantes combinando FTS5 (texto del recurso) con
+    matching por materia, más filtro por categoría según palabras clave.
+    Devuelve lista de dicts: {id, title, description, subject, category,
+    snippet, score}, los más relevantes primero.
+
+    Ejemplos:
+      - "parciales de análisis I" -> recursos de Análisis Matemático I,
+        sólo de la categoría Parciales.
+      - "algebra" -> material de las materias de Álgebra aunque el título del
+        recurso sea genérico ("Parcial 2022").
+    """
+    tokens = _query_tokens(query)
+    if not tokens:
+        return []
+
+    # 1) Categoría: separamos las palabras tipo parcial/final/resumen/apunte.
+    cat_slugs = set()
+    content_tokens = []
+    for t in tokens:
+        if t in CATEGORY_KEYWORDS:
+            cat_slugs |= CATEGORY_KEYWORDS[t]
+        else:
+            content_tokens.append(t)
+
+    # 2) Full-text sobre el texto del recurso (con filtro de categoría).
+    match = _fts_match(content_tokens or tokens)
+    results = _fts_search(match, cat_slugs, limit) if match else []
+
+    # 3) Recall por materia para completar hasta `limit`.
+    if len(results) < limit:
+        seen = {r['id'] for r in results}
+        results.extend(
+            _subject_search(content_tokens, cat_slugs, limit - len(results), seen)
+        )
+
+    return results[:limit]
 
 
 # --------------------------------------------------------------------------- #
@@ -228,11 +324,12 @@ Sos el asistente de Ratoneando, un repositorio de material de estudio de la \
 Universidad Austral. Tu única fuente de verdad es el MATERIAL listado abajo.
 
 Reglas estrictas:
-1. Respondé EXCLUSIVAMENTE con información presente en el MATERIAL. No uses \
-conocimiento propio ni nada que no esté escrito ahí.
-2. Si el MATERIAL no contiene el contenido específico para responder, decilo \
-claramente con una frase como: "No tengo ese material en el repositorio." No \
-intentes responder igual ni rellenes con suposiciones.
+1. Basá tu respuesta en el MATERIAL provisto. No agregues datos de tu \
+conocimiento propio ni inventes nada que no esté ahí.
+2. Si entre el MATERIAL hay recursos relacionados con la pregunta, USALOS para \
+dar una respuesta útil, aunque cubran el tema solo en parte; en ese caso podés \
+aclarar qué quedó afuera. Respondé "No tengo ese material en el repositorio." \
+ÚNICAMENTE cuando ninguno de los recursos tenga relación con lo que se pregunta.
 3. NUNCA inventes datos, definiciones, fechas ni cifras, y NUNCA sugieras sitios \
 web, libros, links ni fuentes externas al repositorio.
 4. Sé conciso y directo: andá al grano, sin rodeos ni relleno.
