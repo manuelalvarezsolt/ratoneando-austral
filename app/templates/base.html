@@ -314,8 +314,7 @@
 }());
 </script>
 
-{% if current_user.is_authenticated %}
-<!-- Asistente IA (agente RAG sobre los apuntes) -->
+<!-- Asistente IA (agente RAG sobre los apuntes) — visible para todos -->
 <button class="agent-fab" id="agentFab" type="button"
         aria-label="Asistente IA" title="Preguntale a la IA">
   <i class="bi bi-stars"></i>
@@ -358,6 +357,8 @@
   var send   = document.getElementById('agentSend');
   var busy   = false;
   var chatHistory = [];   // turnos previos {role, content} para dar contexto a la IA
+  var isAuth   = {{ 'true' if current_user.is_authenticated else 'false' }};
+  var loginUrl = "{{ url_for('auth.login') }}";
 
   function openPanel() {
     panel.hidden = false;
@@ -426,6 +427,12 @@
   function ask() {
     var q = input.value.trim();
     if (!q || busy) return;
+    // Sin login: en vez de pegarle al API, mandamos a iniciar sesión
+    // (con next para volver a esta página después).
+    if (!isAuth) {
+      window.location.href = loginUrl + '?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
     busy = true;
     send.disabled = true;
     addMessage(q, 'user');
@@ -474,7 +481,6 @@
   });
 }());
 </script>
-{% endif %}
 
 <!-- Banner de instalación iOS -->
 <div id="ra-ios-banner"
